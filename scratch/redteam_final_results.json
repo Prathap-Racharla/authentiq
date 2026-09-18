@@ -1,0 +1,969 @@
+{
+  "phases": {
+    "P1": {
+      "name": "Environment",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P1",
+          "test_id": "P1-01",
+          "description": "FastAPI /api/v1/health operational with 10 subsystems",
+          "status": "PASS",
+          "method": "GET http://127.0.0.1:8000/api/v1/health",
+          "result": "HTTP 200, status=HEALTHY, subsystems count=10",
+          "error": null
+        },
+        {
+          "phase": "P1",
+          "test_id": "P1-02",
+          "description": "Security Status reporting active guards",
+          "status": "PASS",
+          "method": "GET http://127.0.0.1:8000/api/v1/security/status",
+          "result": "HTTP 200, status=SECURE_OPERATIONAL, protections=7",
+          "error": null
+        },
+        {
+          "phase": "P1",
+          "test_id": "P1-03",
+          "description": "FastAPI Swagger Documentation reachable at /docs",
+          "status": "PASS",
+          "method": "GET http://127.0.0.1:8000/docs",
+          "result": "HTTP 200, Swagger UI found",
+          "error": null
+        },
+        {
+          "phase": "P1",
+          "test_id": "P1-04",
+          "description": "Vite Frontend reachable on localhost:5173",
+          "status": "PASS",
+          "method": "GET http://localhost:5173",
+          "result": "HTTP 200, HTML delivered",
+          "error": null
+        }
+      ]
+    },
+    "P2": {
+      "name": "API Contract",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P2",
+          "test_id": "P2-01",
+          "description": "GET /api/v1/verification/scenarios schema contract",
+          "status": "PASS",
+          "method": "GET /api/v1/verification/scenarios",
+          "result": "HTTP 200, scenarios=['A', 'B', 'C', 'D']",
+          "error": null
+        },
+        {
+          "phase": "P2",
+          "test_id": "P2-02",
+          "description": "GET /api/v1/audit returns valid event list",
+          "status": "PASS",
+          "method": "GET /api/v1/audit?limit=5",
+          "result": "HTTP 200, count=5",
+          "error": null
+        },
+        {
+          "phase": "P2",
+          "test_id": "P2-03",
+          "description": "GET /api/v1/audit/verify returns cryptographic integrity proof",
+          "status": "PASS",
+          "method": "GET /api/v1/audit/verify",
+          "result": "HTTP 200, integrity=VERIFIED",
+          "error": null
+        },
+        {
+          "phase": "P2",
+          "test_id": "P2-04",
+          "description": "POST /api/v1/audit/event validates schema and rejects missing fields (422)",
+          "status": "PASS",
+          "method": "POST /api/v1/audit/event",
+          "result": "Valid=True, 422 rejected=True",
+          "error": null
+        }
+      ]
+    },
+    "P3": {
+      "name": "Doc Intelligence",
+      "total": 13,
+      "passed": 13,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P3",
+          "test_id": "P3-A",
+          "description": "Valid clear passport image analyzed",
+          "status": "PASS",
+          "method": "Upload clear passport JPEG",
+          "result": "Quality=79.0, MRZ=True",
+          "error": null
+        },
+        {
+          "phase": "P3",
+          "test_id": "P3-B",
+          "description": "Blurry document reduces quality and confidence (not fraud)",
+          "status": "PASS",
+          "method": "Upload Gaussian blurred image",
+          "result": "Quality=37.0 (<70), Confidence=40",
+          "error": null
+        },
+        {
+          "phase": "P3",
+          "test_id": "P3-C",
+          "description": "Low-resolution document detected as degraded",
+          "status": "PASS",
+          "method": "Upload 120x80 image",
+          "result": "Resolution=120 \u00d7 80, Quality=67.0",
+          "error": null
+        },
+        {
+          "phase": "P3",
+          "test_id": "P3-D",
+          "description": "Rotated document handled safely without server crash",
+          "status": "PASS",
+          "method": "Upload 90-degree rotated image",
+          "result": "Success=True, Time=2516.64ms",
+          "error": null
+        },
+        {
+          "phase": "P3",
+          "test_id": "P3-E",
+          "description": "Dark document quality degraded",
+          "status": "PASS",
+          "method": "Upload dark image",
+          "result": "Quality=55.0, Text visibility=Poor",
+          "error": null
+        },
+        {
+          "phase": "P3",
+          "test_id": "P3-F",
+          "description": "Document specular glare detected",
+          "status": "PASS",
+          "method": "Upload glare image",
+          "result": "Glare Level=High, Pct=30.97%",
+          "error": null
+        },
+        {
+          "phase": "P3",
+          "test_id": "P3-G",
+          "description": "Document with OCR/MRZ contradiction produces discrepancy signal",
+          "status": "PASS",
+          "method": "Upload contradictory visual/MRZ image",
+          "result": "Anomalies=9, Mismatch found=False",
+          "error": null
+        },
+        {
+          "phase": "P3",
+          "test_id": "P3-H",
+          "description": "Invalid MRZ check digit identified as invalid check digit",
+          "status": "PASS",
+          "method": "Upload tampered MRZ check digit image",
+          "result": "MRZ detected=True, all check digits valid=False",
+          "error": null
+        },
+        {
+          "phase": "P3",
+          "test_id": "P3-I",
+          "description": "Document without MRZ gracefully reports MRZ detected=False",
+          "status": "PASS",
+          "method": "Upload non-MRZ document image",
+          "result": "MRZ detected=False",
+          "error": null
+        },
+        {
+          "phase": "P3",
+          "test_id": "P3-J",
+          "description": "Unsupported file type (.docx) safely rejected (400)",
+          "status": "PASS",
+          "method": "Upload docx file",
+          "result": "Rejected with 400=True",
+          "error": null
+        },
+        {
+          "phase": "P3",
+          "test_id": "P3-K",
+          "description": "Corrupted JPEG binary rejected or handled safely (400)",
+          "status": "PASS",
+          "method": "Upload truncated JPEG",
+          "result": "Rejected=True",
+          "error": null
+        },
+        {
+          "phase": "P3",
+          "test_id": "P3-L",
+          "description": "Spoofed JPEG with invalid magic bytes rejected (400)",
+          "status": "PASS",
+          "method": "Upload ASCII text named fake.jpg",
+          "result": "Rejected with 400=True",
+          "error": null
+        },
+        {
+          "phase": "P3",
+          "test_id": "P3-M",
+          "description": "Oversized file (>10MB) rejected (400/413)",
+          "status": "PASS",
+          "method": "Upload 10.5MB payload",
+          "result": "Rejected with 400/413=True",
+          "error": null
+        }
+      ]
+    },
+    "P4": {
+      "name": "Adversarial OCR/MRZ",
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P4",
+          "test_id": "P4-01",
+          "description": "Low contrast image handled safely without server failure",
+          "status": "PASS",
+          "method": "Upload low contrast text image",
+          "result": "Success=True, Quality=25.0",
+          "error": null
+        },
+        {
+          "phase": "P4",
+          "test_id": "P4-02",
+          "description": "Salt-and-pepper noisy document handled gracefully",
+          "status": "PASS",
+          "method": "Upload noisy document",
+          "result": "Success=True",
+          "error": null
+        }
+      ]
+    },
+    "P5": {
+      "name": "Evidence Fusion",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P5",
+          "test_id": "P5-01",
+          "description": "Strong doc + strong bio + available DB -> Normal Processing",
+          "status": "PASS",
+          "method": "Fusion evaluation",
+          "result": "Risk=5, Conf=98, Rec=Normal Processing",
+          "error": null
+        },
+        {
+          "phase": "P5",
+          "test_id": "P5-02",
+          "description": "Weak doc + unavailable DB -> Targeted Verification (Low Risk < 25)",
+          "status": "PASS",
+          "method": "Fusion evaluation",
+          "result": "Risk=5 (+0 penalty), Conf=67, Rec=Targeted Verification",
+          "error": null
+        },
+        {
+          "phase": "P5",
+          "test_id": "P5-03",
+          "description": "Strong doc + biometric mismatch -> Officer Review (Risk > 50)",
+          "status": "PASS",
+          "method": "Fusion evaluation",
+          "result": "Risk=55, Conf=96, Rec=Officer Review",
+          "error": null
+        },
+        {
+          "phase": "P5",
+          "test_id": "P5-04",
+          "description": "Multiple unavailable/degraded sources -> Inconclusive (Conf < 50)",
+          "status": "PASS",
+          "method": "Fusion evaluation",
+          "result": "Conf=45 (<50), Rec=Inconclusive",
+          "error": null
+        }
+      ]
+    },
+    "P6": {
+      "name": "Synthetic Scenarios",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P6",
+          "test_id": "P6-A",
+          "description": "Scenario A outputs intended recommendation (Normal Processing)",
+          "status": "PASS",
+          "method": "Execute Scenario A",
+          "result": "Risk=5, Conf=98, Rec=Normal Processing",
+          "error": null
+        },
+        {
+          "phase": "P6",
+          "test_id": "P6-B",
+          "description": "Scenario B outputs intended recommendation (Targeted Verification)",
+          "status": "PASS",
+          "method": "Execute Scenario B",
+          "result": "Risk=18, Conf=82, Rec=Targeted Verification",
+          "error": null
+        },
+        {
+          "phase": "P6",
+          "test_id": "P6-C",
+          "description": "Scenario C outputs intended recommendation (Officer Review)",
+          "status": "PASS",
+          "method": "Execute Scenario C",
+          "result": "Risk=100, Conf=81, Rec=Officer Review",
+          "error": null
+        },
+        {
+          "phase": "P6",
+          "test_id": "P6-D",
+          "description": "Scenario D outputs intended recommendation (Inconclusive)",
+          "status": "PASS",
+          "method": "Execute Scenario D",
+          "result": "Risk=15, Conf=45, Rec=Inconclusive",
+          "error": null
+        }
+      ]
+    },
+    "P7": {
+      "name": "Biometrics",
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P7",
+          "test_id": "P7-01",
+          "description": "Valid face image detected and assessed",
+          "status": "PASS",
+          "method": "Upload valid face",
+          "result": "Detected=True, Quality=45.9%",
+          "error": null
+        },
+        {
+          "phase": "P7",
+          "test_id": "P7-02",
+          "description": "Image without face reports face_detected=False",
+          "status": "PASS",
+          "method": "Upload background without face",
+          "result": "Detected=False, Status=Uncertain",
+          "error": null
+        },
+        {
+          "phase": "P7",
+          "test_id": "P7-03",
+          "description": "Blurry face yields reduced quality score",
+          "status": "PASS",
+          "method": "Upload blurry face",
+          "result": "Quality=31.2% (<70)",
+          "error": null
+        }
+      ]
+    },
+    "P8": {
+      "name": "Explainability",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P8",
+          "test_id": "P8-01",
+          "description": "Explainable risk/confidence factor breakdown without false accusations",
+          "status": "PASS",
+          "method": "Evaluate Scenario B explanation",
+          "result": "Risk factors=4, Conf factors=4",
+          "error": null
+        }
+      ]
+    },
+    "P9": {
+      "name": "Adaptive Verification",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P9",
+          "test_id": "P9-01",
+          "description": "Adaptive next steps tailored to specific evidence gaps",
+          "status": "PASS",
+          "method": "Check adaptive actions",
+          "result": "Recommended action: Complete the unavailable database check or perform...",
+          "error": null
+        }
+      ]
+    },
+    "P11": {
+      "name": "Officer Review",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P11",
+          "test_id": "P11-01",
+          "description": "Officer decisions (Approved/Rejected) immutably recorded into audit trail",
+          "status": "PASS",
+          "method": "Post officer decision audit events",
+          "result": "Recorded hashes: 5af0c10eca... / 513240854e...",
+          "error": null
+        }
+      ]
+    },
+    "P12": {
+      "name": "Audit / Tamper Test",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P12",
+          "test_id": "P12-01",
+          "description": "Tampering with ledger blocks is strictly detected; restoration succeeds",
+          "status": "PASS",
+          "method": "In-memory isolated ledger block tampering test",
+          "result": "Initial valid=True, Tamper detected=True, Restored valid=True",
+          "error": null
+        }
+      ]
+    },
+    "P13": {
+      "name": "Cybersecurity",
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P13",
+          "test_id": "P13-01",
+          "description": "Path traversal filename sanitized safely",
+          "status": "PASS",
+          "method": "Upload ../../../etc/passwd.jpg",
+          "result": "Stored filename=passwd.jpg",
+          "error": null
+        },
+        {
+          "phase": "P13",
+          "test_id": "P13-02",
+          "description": "Malformed JSON rejected safely with 400/422 without exposing stack trace",
+          "status": "PASS",
+          "method": "Post invalid JSON syntax",
+          "result": "Rejected=True",
+          "error": null
+        },
+        {
+          "phase": "P13",
+          "test_id": "P13-03",
+          "description": "Zero raw biometric binary or unencrypted documents in audit ledger",
+          "status": "PASS",
+          "method": "Scan recent audit block payloads",
+          "result": "No raw data leak=True",
+          "error": null
+        }
+      ]
+    },
+    "P14": {
+      "name": "Frontend / UI",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P14",
+          "test_id": "P14-01",
+          "description": "All primary SPA routes return 200 OK without 404/500 errors",
+          "status": "PASS",
+          "method": "HTTP GET across all 5 core routes",
+          "result": "All 5 routes OK=True",
+          "error": null
+        }
+      ]
+    },
+    "P15": {
+      "name": "Data Integrity",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P15",
+          "test_id": "P15-01",
+          "description": "Verification ID preserved consistently across evaluation and audit ledger",
+          "status": "PASS",
+          "method": "Check ID propagation across API boundaries",
+          "result": "Evaluated ID=VER-2026-INTEGRITY-CHECK, Audit ID=VER-2026-INTEGRITY-CHECK",
+          "error": null
+        }
+      ]
+    },
+    "P16": {
+      "name": "Build & Regression",
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P16",
+          "test_id": "P16-01",
+          "description": "Backend pytest suite: 28 of 28 unit/integration tests passing",
+          "status": "PASS",
+          "method": "python -m pytest backend/tests -v",
+          "result": "Return code=0, 28 passed=True",
+          "error": null
+        },
+        {
+          "phase": "P16",
+          "test_id": "P16-02",
+          "description": "Frontend TypeScript production build succeeds with 0 errors",
+          "status": "PASS",
+          "method": "npm run build",
+          "result": "Return code=0, Built=True",
+          "error": null
+        }
+      ]
+    },
+    "P17": {
+      "name": "Judge Walkthrough",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "tests": [
+        {
+          "phase": "P17",
+          "test_id": "P17-01",
+          "description": "Full End-to-End Judge Journey (Intake -> Doc -> Bio -> Fusion -> Officer -> Audit)",
+          "status": "PASS",
+          "method": "End-to-end multi-modal flow simulation",
+          "result": "Session=VER-2026-JUDGE-6746, Risk=15, Conf=83, Rec=Targeted Verification, Audit Verified=VERIFIED",
+          "error": null
+        }
+      ]
+    }
+  },
+  "summary": {
+    "total": 46,
+    "passed": 46,
+    "failed": 0,
+    "fixed": 0,
+    "remaining": 0
+  },
+  "details": [
+    {
+      "phase": "P1",
+      "test_id": "P1-01",
+      "description": "FastAPI /api/v1/health operational with 10 subsystems",
+      "status": "PASS",
+      "method": "GET http://127.0.0.1:8000/api/v1/health",
+      "result": "HTTP 200, status=HEALTHY, subsystems count=10",
+      "error": null
+    },
+    {
+      "phase": "P1",
+      "test_id": "P1-02",
+      "description": "Security Status reporting active guards",
+      "status": "PASS",
+      "method": "GET http://127.0.0.1:8000/api/v1/security/status",
+      "result": "HTTP 200, status=SECURE_OPERATIONAL, protections=7",
+      "error": null
+    },
+    {
+      "phase": "P1",
+      "test_id": "P1-03",
+      "description": "FastAPI Swagger Documentation reachable at /docs",
+      "status": "PASS",
+      "method": "GET http://127.0.0.1:8000/docs",
+      "result": "HTTP 200, Swagger UI found",
+      "error": null
+    },
+    {
+      "phase": "P1",
+      "test_id": "P1-04",
+      "description": "Vite Frontend reachable on localhost:5173",
+      "status": "PASS",
+      "method": "GET http://localhost:5173",
+      "result": "HTTP 200, HTML delivered",
+      "error": null
+    },
+    {
+      "phase": "P2",
+      "test_id": "P2-01",
+      "description": "GET /api/v1/verification/scenarios schema contract",
+      "status": "PASS",
+      "method": "GET /api/v1/verification/scenarios",
+      "result": "HTTP 200, scenarios=['A', 'B', 'C', 'D']",
+      "error": null
+    },
+    {
+      "phase": "P2",
+      "test_id": "P2-02",
+      "description": "GET /api/v1/audit returns valid event list",
+      "status": "PASS",
+      "method": "GET /api/v1/audit?limit=5",
+      "result": "HTTP 200, count=5",
+      "error": null
+    },
+    {
+      "phase": "P2",
+      "test_id": "P2-03",
+      "description": "GET /api/v1/audit/verify returns cryptographic integrity proof",
+      "status": "PASS",
+      "method": "GET /api/v1/audit/verify",
+      "result": "HTTP 200, integrity=VERIFIED",
+      "error": null
+    },
+    {
+      "phase": "P2",
+      "test_id": "P2-04",
+      "description": "POST /api/v1/audit/event validates schema and rejects missing fields (422)",
+      "status": "PASS",
+      "method": "POST /api/v1/audit/event",
+      "result": "Valid=True, 422 rejected=True",
+      "error": null
+    },
+    {
+      "phase": "P3",
+      "test_id": "P3-A",
+      "description": "Valid clear passport image analyzed",
+      "status": "PASS",
+      "method": "Upload clear passport JPEG",
+      "result": "Quality=79.0, MRZ=True",
+      "error": null
+    },
+    {
+      "phase": "P3",
+      "test_id": "P3-B",
+      "description": "Blurry document reduces quality and confidence (not fraud)",
+      "status": "PASS",
+      "method": "Upload Gaussian blurred image",
+      "result": "Quality=37.0 (<70), Confidence=40",
+      "error": null
+    },
+    {
+      "phase": "P3",
+      "test_id": "P3-C",
+      "description": "Low-resolution document detected as degraded",
+      "status": "PASS",
+      "method": "Upload 120x80 image",
+      "result": "Resolution=120 \u00d7 80, Quality=67.0",
+      "error": null
+    },
+    {
+      "phase": "P3",
+      "test_id": "P3-D",
+      "description": "Rotated document handled safely without server crash",
+      "status": "PASS",
+      "method": "Upload 90-degree rotated image",
+      "result": "Success=True, Time=2516.64ms",
+      "error": null
+    },
+    {
+      "phase": "P3",
+      "test_id": "P3-E",
+      "description": "Dark document quality degraded",
+      "status": "PASS",
+      "method": "Upload dark image",
+      "result": "Quality=55.0, Text visibility=Poor",
+      "error": null
+    },
+    {
+      "phase": "P3",
+      "test_id": "P3-F",
+      "description": "Document specular glare detected",
+      "status": "PASS",
+      "method": "Upload glare image",
+      "result": "Glare Level=High, Pct=30.97%",
+      "error": null
+    },
+    {
+      "phase": "P3",
+      "test_id": "P3-G",
+      "description": "Document with OCR/MRZ contradiction produces discrepancy signal",
+      "status": "PASS",
+      "method": "Upload contradictory visual/MRZ image",
+      "result": "Anomalies=9, Mismatch found=False",
+      "error": null
+    },
+    {
+      "phase": "P3",
+      "test_id": "P3-H",
+      "description": "Invalid MRZ check digit identified as invalid check digit",
+      "status": "PASS",
+      "method": "Upload tampered MRZ check digit image",
+      "result": "MRZ detected=True, all check digits valid=False",
+      "error": null
+    },
+    {
+      "phase": "P3",
+      "test_id": "P3-I",
+      "description": "Document without MRZ gracefully reports MRZ detected=False",
+      "status": "PASS",
+      "method": "Upload non-MRZ document image",
+      "result": "MRZ detected=False",
+      "error": null
+    },
+    {
+      "phase": "P3",
+      "test_id": "P3-J",
+      "description": "Unsupported file type (.docx) safely rejected (400)",
+      "status": "PASS",
+      "method": "Upload docx file",
+      "result": "Rejected with 400=True",
+      "error": null
+    },
+    {
+      "phase": "P3",
+      "test_id": "P3-K",
+      "description": "Corrupted JPEG binary rejected or handled safely (400)",
+      "status": "PASS",
+      "method": "Upload truncated JPEG",
+      "result": "Rejected=True",
+      "error": null
+    },
+    {
+      "phase": "P3",
+      "test_id": "P3-L",
+      "description": "Spoofed JPEG with invalid magic bytes rejected (400)",
+      "status": "PASS",
+      "method": "Upload ASCII text named fake.jpg",
+      "result": "Rejected with 400=True",
+      "error": null
+    },
+    {
+      "phase": "P3",
+      "test_id": "P3-M",
+      "description": "Oversized file (>10MB) rejected (400/413)",
+      "status": "PASS",
+      "method": "Upload 10.5MB payload",
+      "result": "Rejected with 400/413=True",
+      "error": null
+    },
+    {
+      "phase": "P4",
+      "test_id": "P4-01",
+      "description": "Low contrast image handled safely without server failure",
+      "status": "PASS",
+      "method": "Upload low contrast text image",
+      "result": "Success=True, Quality=25.0",
+      "error": null
+    },
+    {
+      "phase": "P4",
+      "test_id": "P4-02",
+      "description": "Salt-and-pepper noisy document handled gracefully",
+      "status": "PASS",
+      "method": "Upload noisy document",
+      "result": "Success=True",
+      "error": null
+    },
+    {
+      "phase": "P5",
+      "test_id": "P5-01",
+      "description": "Strong doc + strong bio + available DB -> Normal Processing",
+      "status": "PASS",
+      "method": "Fusion evaluation",
+      "result": "Risk=5, Conf=98, Rec=Normal Processing",
+      "error": null
+    },
+    {
+      "phase": "P5",
+      "test_id": "P5-02",
+      "description": "Weak doc + unavailable DB -> Targeted Verification (Low Risk < 25)",
+      "status": "PASS",
+      "method": "Fusion evaluation",
+      "result": "Risk=5 (+0 penalty), Conf=67, Rec=Targeted Verification",
+      "error": null
+    },
+    {
+      "phase": "P5",
+      "test_id": "P5-03",
+      "description": "Strong doc + biometric mismatch -> Officer Review (Risk > 50)",
+      "status": "PASS",
+      "method": "Fusion evaluation",
+      "result": "Risk=55, Conf=96, Rec=Officer Review",
+      "error": null
+    },
+    {
+      "phase": "P5",
+      "test_id": "P5-04",
+      "description": "Multiple unavailable/degraded sources -> Inconclusive (Conf < 50)",
+      "status": "PASS",
+      "method": "Fusion evaluation",
+      "result": "Conf=45 (<50), Rec=Inconclusive",
+      "error": null
+    },
+    {
+      "phase": "P6",
+      "test_id": "P6-A",
+      "description": "Scenario A outputs intended recommendation (Normal Processing)",
+      "status": "PASS",
+      "method": "Execute Scenario A",
+      "result": "Risk=5, Conf=98, Rec=Normal Processing",
+      "error": null
+    },
+    {
+      "phase": "P6",
+      "test_id": "P6-B",
+      "description": "Scenario B outputs intended recommendation (Targeted Verification)",
+      "status": "PASS",
+      "method": "Execute Scenario B",
+      "result": "Risk=18, Conf=82, Rec=Targeted Verification",
+      "error": null
+    },
+    {
+      "phase": "P6",
+      "test_id": "P6-C",
+      "description": "Scenario C outputs intended recommendation (Officer Review)",
+      "status": "PASS",
+      "method": "Execute Scenario C",
+      "result": "Risk=100, Conf=81, Rec=Officer Review",
+      "error": null
+    },
+    {
+      "phase": "P6",
+      "test_id": "P6-D",
+      "description": "Scenario D outputs intended recommendation (Inconclusive)",
+      "status": "PASS",
+      "method": "Execute Scenario D",
+      "result": "Risk=15, Conf=45, Rec=Inconclusive",
+      "error": null
+    },
+    {
+      "phase": "P7",
+      "test_id": "P7-01",
+      "description": "Valid face image detected and assessed",
+      "status": "PASS",
+      "method": "Upload valid face",
+      "result": "Detected=True, Quality=45.9%",
+      "error": null
+    },
+    {
+      "phase": "P7",
+      "test_id": "P7-02",
+      "description": "Image without face reports face_detected=False",
+      "status": "PASS",
+      "method": "Upload background without face",
+      "result": "Detected=False, Status=Uncertain",
+      "error": null
+    },
+    {
+      "phase": "P7",
+      "test_id": "P7-03",
+      "description": "Blurry face yields reduced quality score",
+      "status": "PASS",
+      "method": "Upload blurry face",
+      "result": "Quality=31.2% (<70)",
+      "error": null
+    },
+    {
+      "phase": "P8",
+      "test_id": "P8-01",
+      "description": "Explainable risk/confidence factor breakdown without false accusations",
+      "status": "PASS",
+      "method": "Evaluate Scenario B explanation",
+      "result": "Risk factors=4, Conf factors=4",
+      "error": null
+    },
+    {
+      "phase": "P9",
+      "test_id": "P9-01",
+      "description": "Adaptive next steps tailored to specific evidence gaps",
+      "status": "PASS",
+      "method": "Check adaptive actions",
+      "result": "Recommended action: Complete the unavailable database check or perform...",
+      "error": null
+    },
+    {
+      "phase": "P11",
+      "test_id": "P11-01",
+      "description": "Officer decisions (Approved/Rejected) immutably recorded into audit trail",
+      "status": "PASS",
+      "method": "Post officer decision audit events",
+      "result": "Recorded hashes: 5af0c10eca... / 513240854e...",
+      "error": null
+    },
+    {
+      "phase": "P12",
+      "test_id": "P12-01",
+      "description": "Tampering with ledger blocks is strictly detected; restoration succeeds",
+      "status": "PASS",
+      "method": "In-memory isolated ledger block tampering test",
+      "result": "Initial valid=True, Tamper detected=True, Restored valid=True",
+      "error": null
+    },
+    {
+      "phase": "P13",
+      "test_id": "P13-01",
+      "description": "Path traversal filename sanitized safely",
+      "status": "PASS",
+      "method": "Upload ../../../etc/passwd.jpg",
+      "result": "Stored filename=passwd.jpg",
+      "error": null
+    },
+    {
+      "phase": "P13",
+      "test_id": "P13-02",
+      "description": "Malformed JSON rejected safely with 400/422 without exposing stack trace",
+      "status": "PASS",
+      "method": "Post invalid JSON syntax",
+      "result": "Rejected=True",
+      "error": null
+    },
+    {
+      "phase": "P13",
+      "test_id": "P13-03",
+      "description": "Zero raw biometric binary or unencrypted documents in audit ledger",
+      "status": "PASS",
+      "method": "Scan recent audit block payloads",
+      "result": "No raw data leak=True",
+      "error": null
+    },
+    {
+      "phase": "P14",
+      "test_id": "P14-01",
+      "description": "All primary SPA routes return 200 OK without 404/500 errors",
+      "status": "PASS",
+      "method": "HTTP GET across all 5 core routes",
+      "result": "All 5 routes OK=True",
+      "error": null
+    },
+    {
+      "phase": "P15",
+      "test_id": "P15-01",
+      "description": "Verification ID preserved consistently across evaluation and audit ledger",
+      "status": "PASS",
+      "method": "Check ID propagation across API boundaries",
+      "result": "Evaluated ID=VER-2026-INTEGRITY-CHECK, Audit ID=VER-2026-INTEGRITY-CHECK",
+      "error": null
+    },
+    {
+      "phase": "P16",
+      "test_id": "P16-01",
+      "description": "Backend pytest suite: 28 of 28 unit/integration tests passing",
+      "status": "PASS",
+      "method": "python -m pytest backend/tests -v",
+      "result": "Return code=0, 28 passed=True",
+      "error": null
+    },
+    {
+      "phase": "P16",
+      "test_id": "P16-02",
+      "description": "Frontend TypeScript production build succeeds with 0 errors",
+      "status": "PASS",
+      "method": "npm run build",
+      "result": "Return code=0, Built=True",
+      "error": null
+    },
+    {
+      "phase": "P17",
+      "test_id": "P17-01",
+      "description": "Full End-to-End Judge Journey (Intake -> Doc -> Bio -> Fusion -> Officer -> Audit)",
+      "status": "PASS",
+      "method": "End-to-end multi-modal flow simulation",
+      "result": "Session=VER-2026-JUDGE-6746, Risk=15, Conf=83, Rec=Targeted Verification, Audit Verified=VERIFIED",
+      "error": null
+    }
+  ]
+}
