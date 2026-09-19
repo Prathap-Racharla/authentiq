@@ -37,7 +37,8 @@ class MRZCheckDigitResult(BaseModel):
 
 class MRZResult(BaseModel):
     detected: bool
-    mrz_type: Optional[str] = None  # 'TD1', 'TD2', 'TD3'
+    applicable: bool = True
+    mrz_type: Optional[str] = None  # 'TD1', 'TD2', 'TD3', or 'Not Applicable'
     raw_lines: List[str] = Field(default_factory=list)
     parsed_fields: Dict[str, str] = Field(default_factory=dict)
     check_digits: List[MRZCheckDigitResult] = Field(default_factory=list)
@@ -81,6 +82,7 @@ class DocumentEvidenceObject(BaseModel):
 class DocumentAnalysisResponse(BaseModel):
     success: bool
     document_id: str
+    document_type: str = "UNKNOWN"
     filename: str
     mime_type: str
     processing_time_ms: float
@@ -92,4 +94,6 @@ class DocumentAnalysisResponse(BaseModel):
     anomalies: List[DocumentAnomalySignal]
     evidence_object: DocumentEvidenceObject
     warnings: List[str] = Field(default_factory=list)
+    dataset_match: bool = False
+    dataset_id: Optional[str] = None
 

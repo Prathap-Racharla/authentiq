@@ -54,11 +54,10 @@ export const ExplainableFindings: React.FC<ExplainableFindingsProps> = ({
         <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
         <div className="space-y-0.5">
           <span className="font-semibold text-cyan-300">
-            Critical Decision-Support Principle:
+            Explainable Decision Axiom:
           </span>
           <p className="text-slate-400 leading-relaxed">
-            <strong className="text-slate-200">Low evidence confidence does not automatically mean high fraud risk.</strong>{' '}
-            Because no malicious alterations were found, the subject is routed for targeted secondary check instead of being penalized.
+            <strong className="text-slate-200">Decoupled evaluation:</strong> Evidence confidence and fraud risk are attributed independently. Incomplete or offline streams reduce confidence but never introduce false fraud penalties.
           </p>
         </div>
       </div>

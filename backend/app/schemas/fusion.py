@@ -1,4 +1,5 @@
 from typing import List, Optional, Dict, Any
+from enum import Enum
 from pydantic import BaseModel, Field
 
 
@@ -63,4 +64,29 @@ class VerificationEvaluationResponse(BaseModel):
     adaptive_next_steps: List[str]
     evidence_map: MultiModalEvidenceMapSchema
     disclaimer: str = "SYNTHETIC DEMO DATA — AI-assisted decision-support prototype. Final determinations require authorized officer review."
+
+
+class CanonicalOfficerDecision(str, Enum):
+    ACCEPT_RECOMMENDATION = "ACCEPT_RECOMMENDATION"
+    REQUEST_ADDITIONAL_VERIFICATION = "REQUEST_ADDITIONAL_VERIFICATION"
+    ESCALATE_FOR_REVIEW = "ESCALATE_FOR_REVIEW"
+    MARK_INCONCLUSIVE = "MARK_INCONCLUSIVE"
+
+
+class OfficerDecisionRequest(BaseModel):
+    decision: CanonicalOfficerDecision
+    notes: str = Field(..., min_length=1, description="Mandatory operational justification notes")
+
+
+class OfficerDecisionResponse(BaseModel):
+    verification_id: str
+    officer_decision: CanonicalOfficerDecision
+    officer_notes: str
+    officer_action_timestamp: str
+    actor: str
+    audit_event_id: str
+    audit_current_hash: str
+    status: str
+    message: str
+
 

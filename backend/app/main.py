@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import documents, biometrics, verification, audit, security
+from app.api.routes import documents, biometrics, verification, audit, security, dataset
 
 app = FastAPI(
     title="AuthentiQ — AI-Based Identity Assurance Platform API",
@@ -33,6 +33,7 @@ app.include_router(biometrics.router, prefix="/api/v1")
 app.include_router(verification.router, prefix="/api/v1")
 app.include_router(audit.router, prefix="/api/v1")
 app.include_router(security.router, prefix="/api/v1")
+app.include_router(dataset.router, prefix="/api/v1")
 
 
 import os

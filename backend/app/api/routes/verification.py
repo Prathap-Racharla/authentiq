@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, status
 from typing import List, Dict, Any
 
@@ -8,10 +9,14 @@ from app.schemas.fusion import (
     MultiModalEvidenceMapSchema,
     EvidenceItemSchema,
     EvidenceSignalSchema,
+    CanonicalOfficerDecision,
+    OfficerDecisionRequest,
+    OfficerDecisionResponse,
 )
 from app.services.fusion.engine import get_fusion_engine
 from app.services.database.adapter import get_database_adapter
 from app.services.context.telemetry import get_context_service
+from app.services.audit.ledger import get_audit_ledger
 
 router = APIRouter(prefix="/verification", tags=["Evidence Fusion & Risk Engine"])
 
@@ -338,12 +343,18 @@ def get_scenarios():
     return SCENARIOS_DATA
 
 
+# In-memory store for authorized officer decisions
+OFFICER_DECISIONS_STORE: Dict[str, Dict[str, Any]] = {}
+
+
 @router.get(
     "/{verification_id}",
     summary="Retrieve Verification Dossier by ID",
     description="Returns stored or benchmark verification dossier."
 )
 def get_verification_dossier(verification_id: str):
+    recorded_decision = OFFICER_DECISIONS_STORE.get(verification_id)
+
     # Match against scenarios first
     for key, sc in SCENARIOS_DATA.items():
         if sc["id"] == verification_id:
@@ -363,8 +374,9 @@ def get_verification_dossier(verification_id: str):
                 "id": sc["id"],
                 "subject": sc["subject"],
                 "evaluation": eval_res,
-                "officer_decision": "Pending",
-                "officer_notes": None,
+                "officer_decision": recorded_decision["decision"] if recorded_decision else sc.get("officer_decision", "PENDING"),
+                "officer_notes": recorded_decision["notes"] if recorded_decision else sc.get("officer_notes"),
+                "officer_action_timestamp": recorded_decision["timestamp"] if recorded_decision else sc.get("officer_action_timestamp"),
                 "disclaimer": "SYNTHETIC DEMO DATA — NOT FOR OPERATIONAL USE"
             }
 
@@ -372,6 +384,78 @@ def get_verification_dossier(verification_id: str):
     return {
         "id": verification_id,
         "message": f"Verification record {verification_id} is active in session memory.",
-        "status": "ACTIVE_SESSION"
+        "status": "ACTIVE_SESSION",
+        "officer_decision": recorded_decision["decision"] if recorded_decision else "PENDING",
+        "officer_notes": recorded_decision["notes"] if recorded_decision else None,
+        "officer_action_timestamp": recorded_decision["timestamp"] if recorded_decision else None,
     }
+
+
+@router.post(
+    "/{verification_id}/officer-decision",
+    response_model=OfficerDecisionResponse,
+    summary="Record Authorized Officer Final Decision",
+    description=(
+        "Persists the authorized officer final decision and mandatory operational justification notes. "
+        "Automatically generates and chains a tamper-evident SHA-256 audit event in the immutable ledger."
+    )
+)
+def record_officer_decision(verification_id: str, payload: OfficerDecisionRequest):
+    notes = payload.notes.strip()
+    if not notes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Officer notes/reason are mandatory for recording an authorized adjudication."
+        )
+
+    # Check if already finalized (immutability rule)
+    if verification_id in OFFICER_DECISIONS_STORE:
+        existing = OFFICER_DECISIONS_STORE[verification_id]
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Officer decision already recorded for {verification_id} on {existing['timestamp']}."
+        )
+
+    actor = "Authorized Officer (Badge #8492)"
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+    # Record into tamper-evident SHA-256 audit ledger (no raw PII)
+    audit_ledger = get_audit_ledger()
+    audit_event = audit_ledger.append_event(
+        verification_id=verification_id,
+        actor=actor,
+        event_type="OFFICER_DECISION",
+        payload_summary=f"Decision: {payload.decision.value} - Notes: {notes}"
+    )
+
+    # Store recorded decision
+    record_data = {
+        "decision": payload.decision.value,
+        "notes": notes,
+        "timestamp": timestamp,
+        "actor": actor,
+        "audit_event_id": audit_event.event_id,
+        "audit_current_hash": audit_event.current_hash
+    }
+    OFFICER_DECISIONS_STORE[verification_id] = record_data
+
+    # Update scenario data if matches scenario
+    for sc in SCENARIOS_DATA.values():
+        if sc["id"] == verification_id:
+            sc["officer_decision"] = payload.decision.value
+            sc["officer_notes"] = notes
+            sc["officer_action_timestamp"] = timestamp
+
+    return OfficerDecisionResponse(
+        verification_id=verification_id,
+        officer_decision=payload.decision,
+        officer_notes=notes,
+        officer_action_timestamp=timestamp,
+        actor=actor,
+        audit_event_id=audit_event.event_id,
+        audit_current_hash=audit_event.current_hash,
+        status="DECISION_RECORDED",
+        message="Authorized officer final decision recorded successfully and chained into tamper-evident audit log."
+    )
+
 

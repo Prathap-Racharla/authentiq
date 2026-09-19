@@ -1,6 +1,10 @@
+import os
 import re
 import time
 import uuid
+import json
+import hashlib
+from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 
 from app.schemas.document import (
@@ -18,6 +22,46 @@ from app.services.document.ocr import get_ocr_provider, BaseOCRProvider
 from app.services.document.mrz import process_mrz
 from app.services.document.consistency import check_consistency
 from app.services.document.anomaly import generate_anomaly_signals
+
+_DATASET_HASH_CACHE: Optional[Dict[str, str]] = None
+
+def get_dataset_hash_map() -> Dict[str, str]:
+    """Return a mapping of SHA-256 hex digests to synthetic dataset IDs."""
+    global _DATASET_HASH_CACHE
+    if _DATASET_HASH_CACHE is not None:
+        return _DATASET_HASH_CACHE
+
+    hash_map: Dict[str, str] = {}
+    try:
+        candidate_roots = [
+            Path(__file__).resolve().parents[3] / "dataset",
+            Path(os.getcwd()) / "dataset",
+            Path(__file__).resolve().parents[2] / "dataset",
+        ]
+        dataset_root = None
+        for cand in candidate_roots:
+            if (cand / "metadata" / "dataset.json").is_file():
+                dataset_root = cand
+                break
+
+        if dataset_root:
+            meta_path = dataset_root / "metadata" / "dataset.json"
+            with open(meta_path, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+            for doc in meta.get("documents", []):
+                doc_id = doc.get("id")
+                rel_path = doc.get("file_path")
+                if doc_id and rel_path:
+                    abs_file = dataset_root / rel_path
+                    if abs_file.is_file():
+                        with open(abs_file, "rb") as bf:
+                            h = hashlib.sha256(bf.read()).hexdigest()
+                            hash_map[h] = doc_id
+    except Exception:
+        pass
+
+    _DATASET_HASH_CACHE = hash_map
+    return _DATASET_HASH_CACHE
 
 
 def extract_structured_fields(raw_text: str, mrz: MRZResult) -> List[StructuredField]:
@@ -42,11 +86,15 @@ def extract_structured_fields(raw_text: str, mrz: MRZResult) -> List[StructuredF
         name_conf = 93.0
 
     if not name_val:
-        for line in lines:
-            m = re.search(r'(?:Full Name|Name / Nom|Name|Holder|Cardholder|Bearer|Name of Bearer)\s*[:.\-]?\s*([A-Za-z\s\.\'-]+)', line, re.IGNORECASE)
+        for idx, line in enumerate(lines):
+            m = re.search(r'(?:Name\s+of\s+Holder|Holder(?:\'s)?\s*Name|Elector(?:\'s)?\s*Name|Full Name|Name / Nom|Cardholder|Bearer|Name of Bearer|Name|Holder)\s*[:.\-]?\s*([A-Za-z\s\.\'-]+)', line, re.IGNORECASE)
             if m:
                 cand = m.group(1).strip()
-                if len(cand) > 2 and not any(k in cand.upper() for k in ['PASSPORT', 'REPUBLIC', 'GOVERNMENT', 'IDENTITY', 'CARD', 'DEPARTMENT', 'LICENCE', 'LICENSE', 'STATE', 'SIGNATURE']):
+                if cand.upper() in ['OF HOLDER', 'HOLDER', 'BEARER', 'OF BEARER']:
+                    # Label was split, look at next line
+                    if idx + 1 < len(lines):
+                        cand = lines[idx + 1].strip()
+                if len(cand) > 2 and not any(k in cand.upper() for k in ['PASSPORT', 'REPUBLIC', 'GOVERNMENT', 'IDENTITY', 'CARD', 'DEPARTMENT', 'LICENCE', 'LICENSE', 'STATE', 'SIGNATURE', 'ELECTION', 'COMMISSION', 'OF HOLDER']):
                     name_val = cand
                     name_conf = 91.0
                     break
@@ -59,7 +107,7 @@ def extract_structured_fields(raw_text: str, mrz: MRZResult) -> List[StructuredF
                     prev = lines[idx - 1]
                     cleaned = re.sub(r'[^A-Za-z\s\.]', '', prev).strip()
                     words = cleaned.split()
-                    if 2 <= len(words) <= 4 and not any(k in cleaned.upper() for k in ['GOVERNMENT', 'INDIA', 'UNION', 'REPUBLIC', 'AUTHORITY', 'DIRECTORATE', 'MINISTRY', 'PHOTO', 'SIGNATURE']):
+                    if 2 <= len(words) <= 4 and not any(k in cleaned.upper() for k in ['GOVERNMENT', 'INDIA', 'UNION', 'REPUBLIC', 'AUTHORITY', 'DIRECTORATE', 'MINISTRY', 'PHOTO', 'SIGNATURE', 'ELECTION', 'COMMISSION']):
                         name_val = cleaned
                         name_conf = 88.0
                         break
@@ -106,10 +154,10 @@ def extract_structured_fields(raw_text: str, mrz: MRZResult) -> List[StructuredF
     # 3. Document Number
     doc_num_val = None
     doc_num_conf = 88.0
-    doc_m = re.search(r'(?:Passport\s*N[oa]|Document\s*N[oa]|ID\s*N[oa]|Card\s*N[oa]|Doc\s*N[oa]|Doc\s*#|Licen[cs]e\s*N[oa]|DL\s*N[oa]|DL|PAN|Aadhaar\s*N[oa]|Card\s*Number|ID\s*Number|Document\s*Number|No\.|Number)\s*[:.\-#]?\s*([A-Z0-9\s-]{5,24})', raw_text, re.IGNORECASE)
+    doc_m = re.search(r'(?:Passport\s*N[oa]|Document\s*N[oa]|ID\s*N[oa]|Card\s*N[oa]|Doc\s*N[oa]|Doc\s*#|Licen[cs]e\s*N[oa]|DL\s*N[oa]|DL|EPIC\s*N[oa]|EPIC|PAN|Aadhaar\s*N[oa]|Card\s*Number|ID\s*Number|Document\s*Number|No\.|Number)\s*[:.\-#]?\s*([A-Z0-9\s-]{5,28})', raw_text, re.IGNORECASE)
     if doc_m:
         cand = doc_m.group(1).strip()
-        cand = re.split(r'\s{2,}|(?=EXP|DOB|SEX|NAME|SURNAME)', cand, flags=re.IGNORECASE)[0].strip()
+        cand = re.split(r'\s{2,}|(?=EXP|DOB|SEX|NAME|SURNAME|VALID)', cand, flags=re.IGNORECASE)[0].strip()
         if len(cand) >= 5:
             doc_num_val = cand
             doc_num_conf = 95.0
@@ -123,6 +171,20 @@ def extract_structured_fields(raw_text: str, mrz: MRZResult) -> List[StructuredF
         aadhaar_m = re.search(r'\b([0-9]{4}\s[0-9]{4}\s[0-9]{4})\b', raw_text)
         if aadhaar_m:
             doc_num_val = aadhaar_m.group(1).strip()
+            doc_num_conf = 94.0
+
+    if not doc_num_val:
+        # Driving Licence pattern: DL-0420180091247
+        dl_m = re.search(r'\b([A-Z]{2}[-][0-9]{11,15}(?:-[A-Z0-9]+)?)\b', raw_text)
+        if dl_m:
+            doc_num_val = dl_m.group(1).strip()
+            doc_num_conf = 95.0
+
+    if not doc_num_val:
+        # Voter ID / EPIC pattern: ABC1234567 or ABC1234567X
+        epic_m = re.search(r'\b([A-Z]{3}[0-9]{7}[A-Z0-9]?)\b', raw_text)
+        if epic_m:
+            doc_num_val = epic_m.group(1).strip()
             doc_num_conf = 94.0
 
     if not doc_num_val:
@@ -202,11 +264,20 @@ def extract_structured_fields(raw_text: str, mrz: MRZResult) -> List[StructuredF
 
     # 6. Expiry Date
     exp_val = None
-    for line in lines:
-        m = re.search(r'(?:Date of Expiry|Expiry Date|Expiry|EXP|Valid Until|Valid Till|Expiration Date|Date d\'expiration)\s*[:.\-]?\s*' + date_pat, line, re.IGNORECASE)
+    for idx, line in enumerate(lines):
+        m = re.search(r'(?:Date of Expiry|Expiry Date|Expiry|EXP|Valid Until|Valid Till|Validity|Expiration Date|Date d\'expiration)\s*[:.\-]?\s*' + date_pat, line, re.IGNORECASE)
         if m:
             exp_val = m.group(1).strip()
             break
+        # If line contains expiry label alone, check subsequent 1-2 lines for date
+        if re.search(r'(?:Date of Expiry|Expiry Date|Expiry|EXP|Valid Until|Valid Till|Expiration Date)\b', line, re.IGNORECASE):
+            for next_idx in range(idx + 1, min(len(lines), idx + 3)):
+                m_next = re.search(date_pat, lines[next_idx])
+                if m_next:
+                    exp_val = m_next.group(1).strip()
+                    break
+            if exp_val:
+                break
 
     if not exp_val and mrz.detected and "expiry_date" in mrz.parsed_fields:
         exp_val = mrz.parsed_fields["expiry_date"]
@@ -256,11 +327,31 @@ def extract_structured_fields(raw_text: str, mrz: MRZResult) -> List[StructuredF
     return fields
 
 
+def detect_document_type(raw_text: str, filename: str, mrz_detected: bool) -> str:
+    """
+    Detect document type from OCR text, filename, and MRZ presence.
+    Returns: 'PASSPORT', 'AADHAAR_STYLE', 'DRIVING_LICENCE', 'VOTER_ID', or 'UNKNOWN'
+    """
+    text_upper = raw_text.upper()
+    fname_lower = filename.lower()
+
+    if mrz_detected or "PASSPORT" in text_upper or "P<" in text_upper or "pass_" in fname_lower or "passport" in fname_lower:
+        return "PASSPORT"
+    if "AADHAAR" in text_upper or "UIDAI" in text_upper or "UNIQUE IDENTIFICATION" in text_upper or "ENROLMENT" in text_upper or "aad_" in fname_lower or "aadhaar" in fname_lower or re.search(r'\b[0-9]{4}\s[0-9]{4}\s[0-9]{4}\b', text_upper):
+        return "AADHAAR_STYLE"
+    if "DRIVING LICENCE" in text_upper or "DRIVING LICENSE" in text_upper or "UNION OF INDIA DRIVING" in text_upper or "dl_" in fname_lower or "dl-" in text_upper or "driving" in fname_lower or "MCWG" in text_upper or "LMV" in text_upper:
+        return "DRIVING_LICENCE"
+    if "ELECTION COMMISSION" in text_upper or "ELECTOR" in text_upper or "VOTER" in text_upper or "EPIC" in text_upper or "vot_" in fname_lower or "voter" in fname_lower:
+        return "VOTER_ID"
+    return "UNKNOWN"
+
+
 def build_evidence_object(
     quality: QualityAssessment,
     mrz: MRZResult,
     consistency: List[CrossFieldConsistencyItem],
-    anomalies: List[DocumentAnomalySignal]
+    anomalies: List[DocumentAnomalySignal],
+    document_type: str = "UNKNOWN"
 ) -> DocumentEvidenceObject:
     """Build standard Document Evidence Object compatible with React EvidenceItem model."""
     signals: List[EvidenceSignal] = []
@@ -287,7 +378,7 @@ def build_evidence_object(
         status = "Uncertain"
         confidence = 86
         availability = "Available"
-        summary = "Document fields extracted with high optical clarity, but cross-field contradictions or MRZ validation anomalies were detected."
+        summary = "Document fields extracted with high optical clarity, but cross-field contradictions, validity expiry, or tampering anomalies were detected."
         for a in anomalies:
             if a.severity == "high":
                 signals.append(EvidenceSignal(
@@ -299,23 +390,31 @@ def build_evidence_object(
         status = "Positive"
         confidence = 94
         availability = "Available"
-        summary = f"Security microprint, typography layout, and MRZ check digits internally consistent ({quality.dimensions})."
+        doc_display_name = document_type.replace('_', ' ').title() if document_type != "UNKNOWN" else "Document"
+        summary = f"Security layout, typography, and optical fields internally consistent for {doc_display_name} ({quality.dimensions})."
         signals.append(EvidenceSignal(
             label="OCR Extraction",
             impact="positive",
             description="OCR extraction successful — visual zone fields extracted with high confidence"
         ))
-        if mrz.detected and mrz.all_check_digits_valid:
+        if mrz.applicable:
+            if mrz.detected and mrz.all_check_digits_valid:
+                signals.append(EvidenceSignal(
+                    label="MRZ Checksum",
+                    impact="positive",
+                    description="ICAO 9303 check digits verified valid"
+                ))
             signals.append(EvidenceSignal(
-                label="MRZ Checksum",
+                label="Field Correlation",
                 impact="positive",
-                description="ICAO 9303 check digits verified valid"
+                description="Visual zone fields match MRZ machine-readable fields"
             ))
-        signals.append(EvidenceSignal(
-            label="Field Correlation",
-            impact="positive",
-            description="Visual zone fields match MRZ machine-readable fields"
-        ))
+        else:
+            signals.append(EvidenceSignal(
+                label="MRZ Format",
+                impact="neutral",
+                description="MRZ machine-readable zone not applicable for this credential format"
+            ))
 
     return DocumentEvidenceObject(
         category="document",
@@ -338,6 +437,11 @@ class DocumentIntelligencePipeline:
     def analyze(self, data: bytes, filename: str, mime_type: str) -> DocumentAnalysisResponse:
         start_time = time.time()
         doc_id = f"DOC-{uuid.uuid4().hex[:8].upper()}"
+
+        # Hash matching for evaluation/testing (does NOT bypass analysis)
+        file_hash = hashlib.sha256(data).hexdigest()
+        matched_dataset_id = get_dataset_hash_map().get(file_hash)
+        is_dataset_match = matched_dataset_id is not None
 
         # Stage 1 & 2: Preprocess and quality assessment
         processed_img = prepare_image(data, mime_type)
@@ -374,13 +478,14 @@ class DocumentIntelligencePipeline:
             return DocumentAnalysisResponse(
                 success=True,
                 document_id=doc_id,
+                document_type="UNKNOWN",
                 filename=filename,
                 mime_type=mime_type,
                 processing_time_ms=duration_ms,
                 quality=quality,
                 ocr_raw_text="",
                 structured_fields=[],
-                mrz=MRZResult(detected=False, mrz_type=None, raw_lines=[], parsed_fields={}, check_digits=[], all_check_digits_valid=False),
+                mrz=MRZResult(detected=False, applicable=True, mrz_type=None, raw_lines=[], parsed_fields={}, check_digits=[], all_check_digits_valid=False),
                 consistency=[],
                 anomalies=[
                     DocumentAnomalySignal(
@@ -393,13 +498,20 @@ class DocumentIntelligencePipeline:
                     )
                 ],
                 evidence_object=evidence_obj,
-                warnings=["OCR text extraction engine is unavailable. Visual zone parsing was skipped."]
+                warnings=["OCR text extraction engine is unavailable. Visual zone parsing was skipped."],
+                dataset_match=is_dataset_match,
+                dataset_id=matched_dataset_id
             )
 
         ocr_result = provider.extract_text(processed_img.image_bytes, filename)
 
-        # Stage 4: MRZ Processing
+        # Stage 4: MRZ Processing & Document Type Detection
         mrz_result = process_mrz(ocr_result.detected_lines)
+        doc_type = detect_document_type(ocr_result.text, filename, mrz_result.detected)
+
+        if doc_type != "PASSPORT" and not mrz_result.detected:
+            mrz_result.applicable = False
+            mrz_result.mrz_type = "Not Applicable"
 
         # Stage 5: Structured Field Extraction (All 7 standard identity fields)
         structured_fields = extract_structured_fields(ocr_result.text, mrz_result)
@@ -410,8 +522,21 @@ class DocumentIntelligencePipeline:
         # Stage 7: Anomaly Signals
         anomaly_signals = generate_anomaly_signals(quality, mrz_result, consistency_items)
 
+        # Add validity check anomaly if expired
+        for item in consistency_items:
+            if item.comparison == "Expiry Date Validity" and item.status == "MISMATCH":
+                if not any(a.signal_id == "SIG-VAL-EXPIRED" for a in anomaly_signals):
+                    anomaly_signals.append(DocumentAnomalySignal(
+                        signal_id="SIG-VAL-EXPIRED",
+                        category="validity",
+                        severity="high",
+                        confidence=96.0,
+                        description="Document validity date has expired; credential is lapsed.",
+                        risk_contribution="+25 risk"
+                    ))
+
         # Stage 8: Document Evidence Object
-        evidence_object = build_evidence_object(quality, mrz_result, consistency_items, anomaly_signals)
+        evidence_object = build_evidence_object(quality, mrz_result, consistency_items, anomaly_signals, doc_type)
 
         duration_ms = round((time.time() - start_time) * 1000.0, 2)
 
@@ -422,10 +547,13 @@ class DocumentIntelligencePipeline:
             warnings.append("High glare reflection observed.")
         if any(a.severity == "high" for a in anomaly_signals):
             warnings.append("Cross-field contradictions or MRZ check digit discrepancies detected.")
+        if any(a.signal_id == "SIG-VAL-EXPIRED" for a in anomaly_signals):
+            warnings.append("Document validity period has expired.")
 
         return DocumentAnalysisResponse(
             success=True,
             document_id=doc_id,
+            document_type=doc_type,
             filename=filename,
             mime_type=mime_type,
             processing_time_ms=duration_ms,
@@ -436,5 +564,7 @@ class DocumentIntelligencePipeline:
             consistency=consistency_items,
             anomalies=anomaly_signals,
             evidence_object=evidence_object,
-            warnings=warnings
+            warnings=warnings,
+            dataset_match=is_dataset_match,
+            dataset_id=matched_dataset_id
         )

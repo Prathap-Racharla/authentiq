@@ -3,7 +3,7 @@ import { AuditTable } from '../components/audit/AuditTable';
 import { fetchAuditEvents, verifyAuditLedger, AuditVerificationStatus } from '../services/auditApi';
 import { AuditEvent } from '../types';
 import { MOCK_AUDIT_EVENTS } from '../data/mockAuditEvents';
-import { ShieldCheck, Lock, Layers, RefreshCw, AlertTriangle, CheckCircle2, Hash } from 'lucide-react';
+import { ShieldCheck, Layers, RefreshCw, AlertTriangle } from 'lucide-react';
 import { truncateHash } from '../utils/hash';
 
 export const AuditPage: React.FC = () => {
@@ -55,16 +55,11 @@ export const AuditPage: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
         <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold tracking-tight text-white">
-              Tamper-Evident Prototype Audit Log
-            </h2>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-semibold tracking-wider">
-              BLOCKCHAIN SIMULATION
-            </span>
-          </div>
+          <h2 className="text-xl font-bold tracking-tight text-white">
+            Audit Ledger
+          </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Cryptographic SHA-256 block-chained event ledger maintaining non-repudiation and decision traceability
+            Tamper-evident record of all verification events and officer decisions.
           </p>
         </div>
 
@@ -73,11 +68,11 @@ export const AuditPage: React.FC = () => {
           <button
             onClick={handleReverify}
             disabled={isVerifying || isLoading}
-            className="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-mono flex items-center gap-1.5 transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-mono flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer"
             title="Re-verify entire SHA-256 cryptographic chain"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin text-cyan-400' : 'text-slate-400'}`} />
-            <span>{isVerifying ? 'Verifying Hashes...' : 'Verify Chain'}</span>
+            <span>{isVerifying ? 'Verifying...' : 'Verify Chain'}</span>
           </button>
 
           <div className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-lg border ${
@@ -92,10 +87,10 @@ export const AuditPage: React.FC = () => {
             )}
             <div className="text-left">
               <span className="text-[10px] font-mono uppercase tracking-widest block font-bold">
-                Ledger: {isVerified ? 'VERIFIED' : 'COMPROMISED'}
+                {isVerified ? 'SHA-256 Chain: VERIFIED' : 'Chain: COMPROMISED'}
               </span>
               <span className="text-[10px] font-mono opacity-80 block">
-                {isVerified ? 'Zero Inconsistencies' : 'Hash Mismatch Detected'}
+                {isVerified ? '0 Inconsistencies Detected' : 'Hash Mismatch Detected'}
               </span>
             </div>
           </div>
@@ -124,33 +119,17 @@ export const AuditPage: React.FC = () => {
         </div>
       )}
 
-      {/* Mandatory Scope & Privacy Disclaimer (User Requirements) */}
-      <div className="bg-slate-900/70 border border-slate-800 rounded-lg p-4 flex items-start gap-3.5 text-xs">
-        <Lock className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
-        <div className="space-y-1 leading-relaxed">
-          <p className="font-semibold text-slate-200">
-            Privacy Assurance &amp; Architecture Roadmap:
-          </p>
-          <p className="text-slate-400">
-            Prototype audit records represent tamper-evident event logging with SHA-256 block chaining. 
-            <strong className="text-slate-300"> Raw identity and biometric data are not stored on the ledger.</strong>{' '}
-            Audit blocks log actor identities, timestamps, event state hashes, and deterministic outcomes. 
-            Production permissioned enterprise blockchain (e.g. Hyperledger Fabric) and multi-signature authorization will be integrated in Phase 2.
-          </p>
-        </div>
-      </div>
-
       {/* Chained Ledger Block Explorer */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-200">
-              Immutable Verification Event Stream
+            <h3 className="text-sm font-semibold text-slate-200">
+              Audit Events
             </h3>
           </div>
           <span className="text-xs font-mono text-slate-400">
-            Chained Parent-Child Hash Sequence ({events.length} records)
+            {events.length} records
           </span>
         </div>
 

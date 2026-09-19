@@ -6,18 +6,7 @@ import { AlertTriangle } from 'lucide-react';
 
 export const MainLayout: React.FC = () => {
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
-      {/* Top Application-Level Banner (Compact Notice) */}
-      <div className="bg-amber-950/80 border-b border-amber-800/60 px-3 py-0.5 text-center text-[10px] font-mono text-amber-300 flex items-center justify-center gap-1.5 z-40 select-none">
-        <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
-        <span className="font-semibold tracking-wider">
-          SYNTHETIC DEMO DATA — NOT FOR OPERATIONAL USE
-        </span>
-        <span className="text-amber-400/70 hidden sm:inline">
-          • All records and biometrics are strictly fictional simulation data
-        </span>
-      </div>
-
+    <div className="min-h-screen bg-[#060a12] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
       {/* Main Header */}
       <Header />
 

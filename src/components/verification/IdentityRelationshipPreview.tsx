@@ -1,5 +1,5 @@
 import React from 'react';
-import { GitFork, ArrowUpRight, ShieldCheck, UserCheck, FileText, Database } from 'lucide-react';
+import { GitFork, ArrowUpRight, UserCheck, FileText, Database } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const IdentityRelationshipPreview: React.FC = () => {
@@ -14,15 +14,15 @@ export const IdentityRelationshipPreview: React.FC = () => {
             <h3 className="text-sm font-semibold text-slate-100 tracking-wide">
               Potential Identity Relationship
             </h3>
-            <span className="text-[11px] text-slate-400">
-              Graph Entity Correlation • Multi-Record Association
+            <span className="text-xs text-slate-400">
+              Connected records and historical matches
             </span>
           </div>
         </div>
 
         <Link
           to="/identity-graph"
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 text-xs font-mono border border-slate-700 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 text-xs font-medium border border-slate-700 transition-colors"
         >
           <span>Open Full Graph</span>
           <ArrowUpRight className="w-3.5 h-3.5" />
@@ -37,14 +37,14 @@ export const IdentityRelationshipPreview: React.FC = () => {
             <div className="w-7 h-7 mx-auto rounded-full bg-cyan-950 flex items-center justify-center border border-cyan-500/40 text-cyan-400">
               <UserCheck className="w-3.5 h-3.5" />
             </div>
-            <span className="text-xs font-bold text-slate-100 block">Current Identity</span>
-            <span className="text-[11px] font-mono text-cyan-300 block">Identity A (Claimed)</span>
+            <span className="text-xs font-semibold text-slate-100 block">Current Identity</span>
+            <span className="text-xs font-mono text-cyan-300 block">Identity A (Claimed)</span>
           </div>
 
           {/* Connection Vector */}
           <div className="flex flex-col items-center justify-center px-2 py-1 text-center">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 mb-1">
-              potentially linked (78%)
+            <span className="text-xs font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 mb-1">
+              78% match
             </span>
             <div className="w-24 h-0.5 bg-gradient-to-r from-cyan-500 via-amber-400 to-slate-600 hidden md:block" />
             <div className="h-8 w-0.5 bg-gradient-to-b from-cyan-500 via-amber-400 to-slate-600 md:hidden" />
@@ -55,30 +55,21 @@ export const IdentityRelationshipPreview: React.FC = () => {
             <div className="p-2.5 rounded bg-slate-900 border border-slate-800 flex items-center gap-2.5">
               <Database className="w-4 h-4 text-sky-400 shrink-0" />
               <div className="text-left min-w-0">
-                <span className="text-xs font-semibold text-slate-200 block truncate">Related Record A</span>
-                <span className="text-[10px] font-mono text-slate-400 block truncate">Municipal Utility Register (REC-2022)</span>
+                <span className="text-xs font-medium text-slate-200 block truncate">Related Record A</span>
+                <span className="text-xs font-mono text-slate-400 block truncate">Municipal Utility Register</span>
               </div>
             </div>
 
             <div className="p-2.5 rounded bg-slate-900 border border-slate-800 flex items-center gap-2.5">
               <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
               <div className="text-left min-w-0">
-                <span className="text-xs font-semibold text-slate-200 block truncate">Related Document B</span>
-                <span className="text-[10px] font-mono text-slate-400 block truncate">National ID Ref IND-DEMO-8942</span>
+                <span className="text-xs font-medium text-slate-200 block truncate">Related Document B</span>
+                <span className="text-xs font-mono text-slate-400 block truncate">National ID Ref IND-DEMO-8942</span>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Objective Policy Note */}
-      <div className="text-xs text-slate-400 flex items-start gap-2 bg-slate-950/40 p-2.5 rounded border border-slate-800/60">
-        <ShieldCheck className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-        <p className="leading-relaxed">
-          <strong className="text-slate-300">Policy Notice:</strong> Potential identity relationships indicate historical or attribute correlation for officer review. They do not by themselves establish fraud.
-        </p>
-      </div>
     </div>
   );
 };
-

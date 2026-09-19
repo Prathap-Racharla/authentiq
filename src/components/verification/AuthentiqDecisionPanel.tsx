@@ -80,120 +80,124 @@ export const AuthentiqDecisionPanel: React.FC<AuthentiqDecisionPanelProps> = ({
       </div>
 
       {/* VISUAL FOCAL POINT: FRAUD RISK + EVIDENCE CONFIDENCE */}
-      <div className="my-5 p-4 md:p-5 rounded-lg bg-slate-950/80 border border-slate-800 shadow-inner">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* FOCAL METER 1: FRAUD RISK */}
-          <div className="space-y-3 pr-0 md:pr-4 md:border-r border-slate-800/80">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
-                  <ShieldAlert className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-200 block">
-                    Fraud Risk
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    Deterministic Discrepancy Score (0–100)
-                  </span>
-                </div>
+      <div className="my-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* FOCAL METER 1: FRAUD RISK */}
+        <div className="rounded-xl bg-slate-950/60 border border-slate-800/90 p-5 space-y-3.5 shadow-inner">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+                <ShieldAlert className="w-4 h-4" />
               </div>
-              <span className={`text-xs px-2.5 py-0.5 rounded border font-mono font-semibold ${riskInfo.badgeBg} ${riskInfo.badgeBorder} ${riskInfo.textColor}`}>
-                {riskInfo.label}
-              </span>
-            </div>
-
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl md:text-5xl font-black font-mono tracking-tight text-slate-100">
-                {record.fraudRisk}
-              </span>
-              <span className="text-lg font-mono text-slate-400">/ 100</span>
-            </div>
-
-            {/* Segmented Risk Bar */}
-            <div className="space-y-1">
-              <div className="h-2.5 w-full bg-slate-900 rounded-full overflow-hidden flex border border-slate-800">
-                <div 
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{ 
-                    width: `${Math.min(100, Math.max(2, record.fraudRisk))}%`,
-                    backgroundColor: riskInfo.color 
-                  }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-slate-400 font-mono pt-0.5">
-                <span>0 (Low)</span>
-                <span>25 (Threshold)</span>
-                <span>50 (High)</span>
-                <span>100</span>
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-200 block font-sans">
+                  Fraud Risk
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Deterministic Discrepancy Score (0–100)
+                </span>
               </div>
             </div>
-
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              No evidence of optical tampering or identity impersonation detected (+0 risk).
-            </p>
+            <span className={`text-xs px-2.5 py-0.5 rounded-md border font-mono font-semibold ${riskInfo.badgeBg} ${riskInfo.badgeBorder} ${riskInfo.textColor}`}>
+              {riskInfo.label}
+            </span>
           </div>
 
-          {/* FOCAL METER 2: EVIDENCE CONFIDENCE */}
-          <div className="space-y-3 pl-0 md:pl-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded bg-cyan-950/60 border border-cyan-800/50 text-cyan-400">
-                  <Layers className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-200 block">
-                    Evidence Confidence
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    Corroboration Completeness (0–100)
-                  </span>
-                </div>
-              </div>
-              <span className={`text-xs px-2.5 py-0.5 rounded border font-mono font-semibold ${confInfo.badgeBg} ${confInfo.badgeBorder} ${confInfo.textColor}`}>
-                {confInfo.label}
-              </span>
-            </div>
-
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl md:text-5xl font-black font-mono tracking-tight text-slate-100">
-                {record.evidenceConfidence}
-              </span>
-              <span className="text-lg font-mono text-slate-400">/ 100</span>
-            </div>
-
-            {/* Segmented Confidence Bar */}
-            <div className="space-y-1">
-              <div className="h-2.5 w-full bg-slate-900 rounded-full overflow-hidden flex border border-slate-800">
-                <div 
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{ 
-                    width: `${Math.min(100, Math.max(2, record.evidenceConfidence))}%`,
-                    backgroundColor: confInfo.color 
-                  }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-slate-400 font-mono pt-0.5">
-                <span>0 (Inconclusive)</span>
-                <span>50 (Min Threshold)</span>
-                <span>85 (Baseline)</span>
-                <span>100</span>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Reduced from 95% due to unavailable civil database check (-18% completeness).
-            </p>
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl md:text-5xl font-black font-mono tracking-tight text-slate-100">
+              {record.fraudRisk}
+            </span>
+            <span className="text-base font-mono text-slate-400">/ 100</span>
           </div>
+
+          {/* Segmented Risk Bar */}
+          <div className="space-y-1.5">
+            <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden flex border border-slate-800">
+              <div 
+                className="h-full rounded-full transition-all duration-500"
+                style={{ 
+                  width: `${Math.min(100, Math.max(2, record.fraudRisk))}%`,
+                  backgroundColor: riskInfo.color 
+                }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+              <span>0 (Low)</span>
+              <span>25 (Threshold)</span>
+              <span>50 (High Risk)</span>
+              <span>100</span>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
+            {record.fraudRisk > 50
+              ? "Elevated fraud indicators detected across credential or biometric streams (> 50/100)."
+              : "Low discrepancy across submitted credentials and biometric signals (+0 risk penalty)."}
+          </p>
         </div>
 
-        {/* Explicit Decoupling Principle Bar */}
-        <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-2 text-xs text-cyan-300 font-mono bg-cyan-950/20 px-3 py-2 rounded border border-cyan-900/30">
-          <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-          <span>
-            <strong>Fundamental Axiom:</strong> Evidence Confidence ≠ Fraud Risk • Low completeness reflects an offline source, NOT deception.
-          </span>
+        {/* FOCAL METER 2: EVIDENCE CONFIDENCE */}
+        <div className="rounded-xl bg-slate-950/60 border border-slate-800/90 p-5 space-y-3.5 shadow-inner">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-cyan-950/60 border border-cyan-800/50 text-cyan-400">
+                <Layers className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-200 block font-sans">
+                  Evidence Confidence
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Corroboration Completeness (0–100)
+                </span>
+              </div>
+            </div>
+            <span className={`text-xs px-2.5 py-0.5 rounded-md border font-mono font-semibold ${confInfo.badgeBg} ${confInfo.badgeBorder} ${confInfo.textColor}`}>
+              {confInfo.label}
+            </span>
+          </div>
+
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl md:text-5xl font-black font-mono tracking-tight text-slate-100">
+              {record.evidenceConfidence}
+            </span>
+            <span className="text-base font-mono text-slate-400">/ 100</span>
+          </div>
+
+          {/* Segmented Confidence Bar */}
+          <div className="space-y-1.5">
+            <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden flex border border-slate-800">
+              <div 
+                className="h-full rounded-full transition-all duration-500"
+                style={{ 
+                  width: `${Math.min(100, Math.max(2, record.evidenceConfidence))}%`,
+                  backgroundColor: confInfo.color 
+                }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+              <span>0 (Inconclusive)</span>
+              <span>50 (Min Threshold)</span>
+              <span>85 (Baseline)</span>
+              <span>100</span>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
+            {record.evidenceConfidence < 50
+              ? "Evidence completeness is below minimum reliable decision threshold (< 50/100)."
+              : record.evidenceConfidence < 85
+                ? "Completeness below baseline (< 85/100) due to offline/degraded source (+0 fraud risk)."
+                : "High multi-stream corroboration depth verified across optical and database signals."}
+          </p>
         </div>
+      </div>
+
+      {/* Explicit Decoupling Principle Bar */}
+      <div className="mb-5 flex items-center gap-2.5 text-xs text-cyan-300 font-mono bg-cyan-950/20 px-4 py-2.5 rounded-lg border border-cyan-800/30">
+        <Info className="w-4 h-4 text-cyan-400 shrink-0" />
+        <span>
+          <strong>Fundamental Axiom:</strong> Evidence Confidence ≠ Fraud Risk • Low completeness reflects an offline source, NOT deception.
+        </span>
       </div>
 
       {/* Rationale & Officer Status Sub-panel */}
@@ -203,7 +207,7 @@ export const AuthentiqDecisionPanel: React.FC<AuthentiqDecisionPanelProps> = ({
             Recommended Action &amp; Operational Path
           </span>
           <p className="text-slate-300 leading-relaxed">
-            <strong className="text-amber-300 font-semibold">Targeted Verification:</strong> {record.recommendationReason}
+            <strong className="text-cyan-300 font-semibold">{record.status}:</strong> {record.recommendationReason}
           </p>
         </div>
 

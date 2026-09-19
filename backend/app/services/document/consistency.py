@@ -39,6 +39,34 @@ def check_consistency(
     items: List[CrossFieldConsistencyItem] = []
     field_map = {f.field: f.value for f in structured_fields}
 
+    if not mrz.applicable:
+        items.append(CrossFieldConsistencyItem(
+            comparison="OCR ↔ MRZ Cross-Check",
+            ocr_value="N/A",
+            mrz_value="Not Applicable",
+            status="NOT_APPLICABLE",
+            explanation="Document format does not utilize an ICAO 9303 machine-readable zone; MRZ cross-check not applicable."
+        ))
+        exp_date = field_map.get("expiry_date")
+        if exp_date:
+            norm_exp = normalize_date(exp_date)
+            is_valid = True
+            try:
+                if norm_exp and len(norm_exp) == 10:
+                    parsed = datetime.strptime(norm_exp, "%Y-%m-%d")
+                    is_valid = parsed > datetime.now()
+            except Exception:
+                pass
+
+            items.append(CrossFieldConsistencyItem(
+                comparison="Expiry Date Validity",
+                ocr_value=exp_date,
+                mrz_value=norm_exp,
+                status="MATCH" if is_valid else "MISMATCH",
+                explanation="Credential is valid within authorized expiry validity window." if is_valid else "Credential expiration date has lapsed."
+            ))
+        return items
+
     if not mrz.detected:
         items.append(CrossFieldConsistencyItem(
             comparison="OCR ↔ MRZ Cross-Check",
@@ -47,6 +75,24 @@ def check_consistency(
             status="UNAVAILABLE",
             explanation="Document does not contain an optical MRZ block; machine-readable cross-check unavailable."
         ))
+        exp_date = field_map.get("expiry_date")
+        if exp_date:
+            norm_exp = normalize_date(exp_date)
+            is_valid = True
+            try:
+                if norm_exp and len(norm_exp) == 10:
+                    parsed = datetime.strptime(norm_exp, "%Y-%m-%d")
+                    is_valid = parsed > datetime.now()
+            except Exception:
+                pass
+
+            items.append(CrossFieldConsistencyItem(
+                comparison="Expiry Date Validity",
+                ocr_value=exp_date,
+                mrz_value=norm_exp,
+                status="MATCH" if is_valid else "MISMATCH",
+                explanation="Credential is valid within authorized expiry validity window." if is_valid else "Credential expiration date has lapsed."
+            ))
         return items
 
     mrz_fields = mrz.parsed_fields

@@ -39,7 +39,8 @@ export interface MRZCheckDigitResult {
 
 export interface MRZResult {
   detected: boolean;
-  mrz_type?: 'TD1' | 'TD2' | 'TD3';
+  applicable?: boolean;
+  mrz_type?: 'TD1' | 'TD2' | 'TD3' | 'Not Applicable' | string;
   raw_lines: string[];
   parsed_fields: Record<string, string>;
   check_digits: MRZCheckDigitResult[];
@@ -50,13 +51,13 @@ export interface CrossFieldConsistencyItem {
   comparison: string;
   ocr_value?: string;
   mrz_value?: string;
-  status: 'MATCH' | 'MISMATCH' | 'UNAVAILABLE';
+  status: 'MATCH' | 'MISMATCH' | 'UNAVAILABLE' | 'NOT_APPLICABLE';
   explanation: string;
 }
 
 export interface DocumentAnomalySignal {
   signal_id: string;
-  category: 'integrity' | 'quality' | 'consistency' | 'security';
+  category: 'integrity' | 'quality' | 'consistency' | 'security' | 'validity';
   severity: 'informational' | 'low' | 'medium' | 'high';
   confidence: number;
   description: string;
@@ -81,6 +82,7 @@ export interface DocumentEvidenceObject {
 export interface DocumentAnalysisResponse {
   success: boolean;
   document_id: string;
+  document_type?: string;
   filename: string;
   mime_type: string;
   processing_time_ms: number;
@@ -92,6 +94,8 @@ export interface DocumentAnalysisResponse {
   anomalies: DocumentAnomalySignal[];
   evidence_object: DocumentEvidenceObject;
   warnings: string[];
+  dataset_match?: boolean;
+  dataset_id?: string | null;
 }
 
 export async function checkBackendHealth(): Promise<boolean> {

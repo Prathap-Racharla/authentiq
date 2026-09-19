@@ -134,13 +134,17 @@ export const DocumentAnalysisModal: React.FC<DocumentAnalysisModalProps> = ({
           >
             <Scan className="w-3.5 h-3.5" />
             MRZ Inspector
-            {mrz.detected && (
+            {mrz.applicable === false ? (
+              <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-slate-700/50 text-slate-400 font-mono">
+                N/A
+              </span>
+            ) : mrz.detected ? (
               <span className={`ml-1 text-[10px] px-1.5 py-0.2 rounded-full ${
                 mrz.all_check_digits_valid ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
               }`}>
                 {mrz.all_check_digits_valid ? 'PASS' : 'FAIL'}
               </span>
-            )}
+            ) : null}
           </button>
           <button
             onClick={() => setActiveTab('consistency')}
@@ -367,7 +371,20 @@ export const DocumentAnalysisModal: React.FC<DocumentAnalysisModalProps> = ({
           {/* TAB 3: MRZ INSPECTOR */}
           {activeTab === 'mrz' && (
             <div className="space-y-6">
-              {!mrz.detected ? (
+              {mrz.applicable === false ? (
+                <div className="p-8 rounded-lg bg-slate-800/30 border border-slate-700/60 text-center space-y-3">
+                  <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto text-slate-400 font-bold text-xs font-mono">
+                    N/A
+                  </div>
+                  <div className="text-sm font-semibold text-slate-200">MRZ: Not Applicable</div>
+                  <p className="text-xs text-slate-400 max-w-lg mx-auto leading-relaxed">
+                    This document format (e.g. Aadhaar, Driving Licence, Voter ID) does not utilize an ICAO 9303 standard Machine Readable Zone. AuthentiQ evaluates this credential strictly through optical typography, security layout, and visual inspection zone consistency without MRZ checksum penalties.
+                  </p>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-emerald-400">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> No MRZ Penalty Applied (+0 Fraud Risk)
+                  </div>
+                </div>
+              ) : !mrz.detected ? (
                 <div className="p-6 rounded-lg bg-slate-800/40 border border-slate-700/60 text-center space-y-2">
                   <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto" />
                   <div className="text-sm font-semibold text-slate-200">No Machine Readable Zone (MRZ) Detected</div>

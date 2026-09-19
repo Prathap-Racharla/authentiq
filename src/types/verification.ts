@@ -8,12 +8,20 @@ export type VerificationStatus =
 
 export type VerificationMode = 'Standard' | 'Enhanced' | 'Targeted';
 
+export type CanonicalOfficerDecision = 
+  | 'PENDING'
+  | 'ACCEPT_RECOMMENDATION'
+  | 'REQUEST_ADDITIONAL_VERIFICATION'
+  | 'ESCALATE_FOR_REVIEW'
+  | 'MARK_INCONCLUSIVE';
+
 export type OfficerDecision = 
   | 'Pending' 
   | 'Authorized' 
   | 'Targeted Verification Ordered' 
   | 'Secondary Check Ordered' 
-  | 'In-Person Interview Requested';
+  | 'In-Person Interview Requested'
+  | CanonicalOfficerDecision;
 
 export interface FactorContribution {
   factor: string;

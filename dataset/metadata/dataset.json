@@ -1,0 +1,309 @@
+{
+  "dataset_version": "1.0.0",
+  "generated_at": "2026-09-19T00:00:00Z",
+  "total_documents": 12,
+  "safety_notice": "ALL IDENTITIES, NUMBERS, NAMES, DATES, ADDRESSES, AND PORTRAITS IN THIS DATASET ARE 100% SYNTHETIC AND FICTIONAL. NO REAL PII IS PRESENT.",
+  "documents": [
+    {
+      "id": "PASS-001",
+      "category": "passport",
+      "title": "Clean International Passport",
+      "description": "Standard authentic-style ICAO 9303 compliant synthetic passport with crisp OCR and matching MRZ check digits.",
+      "file_path": "documents/passport/pass_001.png",
+      "synthetic_identity": {
+        "name": "VIKRAM ARUN SHARMA",
+        "document_number": "Z8492015",
+        "dob": "1988-04-12",
+        "expiry_date": "2032-04-11",
+        "gender": "M",
+        "nationality": "UTO",
+        "address": null
+      },
+      "expected_pipeline_behavior": {
+        "ocr_expected": "High confidence OCR on visual inspection zone",
+        "mrz_expected": "Valid ICAO 9303 TD3 MRZ with passing check digits",
+        "mrz_applicable": true,
+        "expected_risk_profile": "LOW_RISK",
+        "expected_signals": ["MRZ Check Digits Valid", "Visual-MRZ Consistency Match", "Clean Biometric Portrait Zone"]
+      },
+      "tamper_type": "none",
+      "demonstrates": "Baseline genuine passport verification with full MRZ checksum validation and visual consistency."
+    },
+    {
+      "id": "PASS-002",
+      "category": "passport",
+      "title": "Passport with MRZ Check Digit Mismatch",
+      "description": "Passport with intentional tamper in MRZ check digit (Z84920159 instead of Z84920156) simulating altered identity number.",
+      "file_path": "documents/passport/pass_002.png",
+      "synthetic_identity": {
+        "name": "VIKRAM ARUN SHARMA",
+        "document_number": "Z8492015",
+        "dob": "1988-04-12",
+        "expiry_date": "2032-04-11",
+        "gender": "M",
+        "nationality": "UTO",
+        "address": null
+      },
+      "expected_pipeline_behavior": {
+        "ocr_expected": "High confidence OCR on visual inspection zone",
+        "mrz_expected": "MRZ checksum failure on document number check digit",
+        "mrz_applicable": true,
+        "expected_risk_profile": "HIGH_RISK",
+        "expected_signals": ["MRZ Checksum Failure", "Identity Anomaly Flag"]
+      },
+      "tamper_type": "mrz_mismatch",
+      "demonstrates": "Detection of manipulated machine-readable zone checksums."
+    },
+    {
+      "id": "PASS-003",
+      "category": "passport",
+      "title": "Low Resolution / Degraded Passport",
+      "description": "Passport captured under poor optical conditions with Gaussian blur and lower DPI, testing OCR robustness and evidence confidence degradation.",
+      "file_path": "documents/passport/pass_003.png",
+      "synthetic_identity": {
+        "name": "VIKRAM ARUN SHARMA",
+        "document_number": "Z8492015",
+        "dob": "1988-04-12",
+        "expiry_date": "2032-04-11",
+        "gender": "M",
+        "nationality": "UTO",
+        "address": null
+      },
+      "expected_pipeline_behavior": {
+        "ocr_expected": "Degraded OCR confidence due to optical blur",
+        "mrz_expected": "May have read errors or low character confidence",
+        "mrz_applicable": true,
+        "expected_risk_profile": "MEDIUM_RISK",
+        "expected_signals": ["Low Evidence Confidence", "Document Quality Anomaly"]
+      },
+      "tamper_type": "low_resolution",
+      "demonstrates": "Evidence confidence scoring and adaptive step-up requests triggered by image degradation."
+    },
+    {
+      "id": "AAD-001",
+      "category": "aadhaar",
+      "title": "Clean Aadhaar-Style ID Card",
+      "description": "Synthetic national ID card with 12-digit UIDAI-pattern number, barcode, and clean text layout. MRZ is not applicable.",
+      "file_path": "documents/aadhaar/aad_001.png",
+      "synthetic_identity": {
+        "name": "PRIYA RAJESH PATEL",
+        "document_number": "9182 3746 5019",
+        "dob": "1994-08-23",
+        "expiry_date": null,
+        "gender": "F",
+        "nationality": "IND",
+        "address": "402, Lotus Enclave, MG Road, Pune, Maharashtra - 411001"
+      },
+      "expected_pipeline_behavior": {
+        "ocr_expected": "Clean extraction of 12-digit ID, DOB, Name, and Address",
+        "mrz_expected": "Not Applicable",
+        "mrz_applicable": false,
+        "expected_risk_profile": "LOW_RISK",
+        "expected_signals": ["Document Type: Aadhaar-Style", "MRZ: Not Applicable", "12-digit Format Valid"]
+      },
+      "tamper_type": "none",
+      "demonstrates": "Document-type awareness where non-MRZ documents correctly bypass MRZ penalties while verifying visual fields."
+    },
+    {
+      "id": "AAD-002",
+      "category": "aadhaar",
+      "title": "Aadhaar with Name/DOB Anomaly",
+      "description": "Aadhaar card with mismatched formatting, unformatted ID number (9182374650199 13 digits) and inconsistent DOB format.",
+      "file_path": "documents/aadhaar/aad_002.png",
+      "synthetic_identity": {
+        "name": "PRIYA R PATEL",
+        "document_number": "9182374650199",
+        "dob": "1994/08/23",
+        "expiry_date": null,
+        "gender": "F",
+        "nationality": "IND",
+        "address": "402 Lotus Enclave Pune"
+      },
+      "expected_pipeline_behavior": {
+        "ocr_expected": "Extraction reveals 13-digit non-standard ID and formatting inconsistencies",
+        "mrz_expected": "Not Applicable",
+        "mrz_applicable": false,
+        "expected_risk_profile": "MEDIUM_RISK",
+        "expected_signals": ["ID Format Anomaly (13 digits)", "MRZ: Not Applicable"]
+      },
+      "tamper_type": "tampered_composite",
+      "demonstrates": "Visual field validation and format conformance checks on national ID documents."
+    },
+    {
+      "id": "AAD-003",
+      "category": "aadhaar",
+      "title": "Blurred Aadhaar-Style ID Card",
+      "description": "Aadhaar card with motion blur simulating poor camera capture on mobile onboarding.",
+      "file_path": "documents/aadhaar/aad_003.png",
+      "synthetic_identity": {
+        "name": "PRIYA RAJESH PATEL",
+        "document_number": "9182 3746 5019",
+        "dob": "1994-08-23",
+        "expiry_date": null,
+        "gender": "F",
+        "nationality": "IND",
+        "address": "402, Lotus Enclave, MG Road, Pune, Maharashtra - 411001"
+      },
+      "expected_pipeline_behavior": {
+        "ocr_expected": "Reduced OCR extraction accuracy due to blur",
+        "mrz_expected": "Not Applicable",
+        "mrz_applicable": false,
+        "expected_risk_profile": "MEDIUM_RISK",
+        "expected_signals": ["Low Evidence Confidence", "Document Quality Anomaly", "MRZ: Not Applicable"]
+      },
+      "tamper_type": "blurred",
+      "demonstrates": "Adaptive verification engine triggering document re-capture request due to poor image quality."
+    },
+    {
+      "id": "DL-001",
+      "category": "driving_licence",
+      "title": "Valid Synthetic Driving Licence",
+      "description": "Standard synthetic driving licence with valid future expiry date (2034-03-14), vehicle classes (MCWG, LMV), and clean OCR fields.",
+      "file_path": "documents/driving_licence/dl_001.png",
+      "synthetic_identity": {
+        "name": "KAVITA SURESH NAIR",
+        "document_number": "DL-0420180091247",
+        "dob": "1991-11-05",
+        "expiry_date": "2034-03-14",
+        "gender": "F",
+        "nationality": "IND",
+        "address": "12/A, Palm Grove, Indiranagar, Bengaluru, Karnataka - 560038"
+      },
+      "expected_pipeline_behavior": {
+        "ocr_expected": "Extraction of licence number, vehicle classes, DOB, and valid expiry date",
+        "mrz_expected": "Not Applicable",
+        "mrz_applicable": false,
+        "expected_risk_profile": "LOW_RISK",
+        "expected_signals": ["Document Type: Driving Licence", "Validity: Active/Non-Expired", "MRZ: Not Applicable"]
+      },
+      "tamper_type": "none",
+      "demonstrates": "Genuine driving licence verification with validity checking and non-MRZ handling."
+    },
+    {
+      "id": "DL-002",
+      "category": "driving_licence",
+      "title": "Expired Synthetic Driving Licence",
+      "description": "Driving licence with an expired validity date (2021-03-14), testing pipeline document validity date checks.",
+      "file_path": "documents/driving_licence/dl_002.png",
+      "synthetic_identity": {
+        "name": "KAVITA SURESH NAIR",
+        "document_number": "DL-0420180091247",
+        "dob": "1991-11-05",
+        "expiry_date": "2021-03-14",
+        "gender": "F",
+        "nationality": "IND",
+        "address": "12/A, Palm Grove, Indiranagar, Bengaluru, Karnataka - 560038"
+      },
+      "expected_pipeline_behavior": {
+        "ocr_expected": "Clean extraction of expired validity date (2021-03-14)",
+        "mrz_expected": "Not Applicable",
+        "mrz_applicable": false,
+        "expected_risk_profile": "HIGH_RISK",
+        "expected_signals": ["Expired Document Detected", "Validity Check Failed", "MRZ: Not Applicable"]
+      },
+      "tamper_type": "expired",
+      "demonstrates": "Automated detection of expired credentials resulting in fraud/validity risk flags."
+    },
+    {
+      "id": "DL-003",
+      "category": "driving_licence",
+      "title": "Tampered Number Driving Licence",
+      "description": "Driving licence exhibiting visual font discontinuity, spliced number text, and compression artifacts around the ID field.",
+      "file_path": "documents/driving_licence/dl_003.png",
+      "synthetic_identity": {
+        "name": "KAVITA SURESH NAIR",
+        "document_number": "DL-0420180091247-MOD",
+        "dob": "1991-11-05",
+        "expiry_date": "2034-03-14",
+        "gender": "F",
+        "nationality": "IND",
+        "address": "12/A, Palm Grove, Indiranagar, Bengaluru, Karnataka - 560038"
+      },
+      "expected_pipeline_behavior": {
+        "ocr_expected": "Discontinuity in font and character metrics",
+        "mrz_expected": "Not Applicable",
+        "mrz_applicable": false,
+        "expected_risk_profile": "HIGH_RISK",
+        "expected_signals": ["Tampered/Spliced Text Anomaly", "Font Discontinuity", "MRZ: Not Applicable"]
+      },
+      "tamper_type": "tampered_composite",
+      "demonstrates": "Optical anomaly and document tampering detection on identity credentials."
+    },
+    {
+      "id": "VOT-001",
+      "category": "voter_id",
+      "title": "Clean Synthetic Voter ID Card",
+      "description": "Election commission style synthetic EPIC identity card with 10-character alphanumeric EPIC number (ABC1234567).",
+      "file_path": "documents/voter_id/vot_001.png",
+      "synthetic_identity": {
+        "name": "AMIT KUMAR VERMA",
+        "document_number": "ABC1234567",
+        "dob": "1985-06-18",
+        "expiry_date": null,
+        "gender": "M",
+        "nationality": "IND",
+        "address": "H.No 78, Sector 15, Vasundhara, Ghaziabad, UP - 201012"
+      },
+      "expected_pipeline_behavior": {
+        "ocr_expected": "Clean extraction of EPIC number, elector name, relation name, and constituency",
+        "mrz_expected": "Not Applicable",
+        "mrz_applicable": false,
+        "expected_risk_profile": "LOW_RISK",
+        "expected_signals": ["Document Type: Voter ID", "EPIC Format Valid", "MRZ: Not Applicable"]
+      },
+      "tamper_type": "none",
+      "demonstrates": "Verification of legacy-format election cards without MRZ or machine-readable zones."
+    },
+    {
+      "id": "VOT-002",
+      "category": "voter_id",
+      "title": "Voter ID with Altered Details",
+      "description": "Voter ID card with mismatched EPIC format (ABC1234567X with anomalous extra character) and contradictory father/husband relation text.",
+      "file_path": "documents/voter_id/vot_002.png",
+      "synthetic_identity": {
+        "name": "AMIT KUMAR VERMA",
+        "document_number": "ABC1234567X",
+        "dob": "1985-06-18",
+        "expiry_date": null,
+        "gender": "M",
+        "nationality": "IND",
+        "address": "H.No 78 Sector 15 Ghaziabad"
+      },
+      "expected_pipeline_behavior": {
+        "ocr_expected": "EPIC format anomaly detected (non-standard 11 characters)",
+        "mrz_expected": "Not Applicable",
+        "mrz_applicable": false,
+        "expected_risk_profile": "MEDIUM_RISK",
+        "expected_signals": ["EPIC Format Length Anomaly", "MRZ: Not Applicable"]
+      },
+      "tamper_type": "tampered_composite",
+      "demonstrates": "Detection of altered alphanumeric identifier strings on voter credentials."
+    },
+    {
+      "id": "VOT-003",
+      "category": "voter_id",
+      "title": "Low Contrast Synthetic Voter ID",
+      "description": "Faded and low-contrast synthetic voter card simulating aged laminated photo identity cards.",
+      "file_path": "documents/voter_id/vot_003.png",
+      "synthetic_identity": {
+        "name": "AMIT KUMAR VERMA",
+        "document_number": "ABC1234567",
+        "dob": "1985-06-18",
+        "expiry_date": null,
+        "gender": "M",
+        "nationality": "IND",
+        "address": "H.No 78, Sector 15, Vasundhara, Ghaziabad, UP - 201012"
+      },
+      "expected_pipeline_behavior": {
+        "ocr_expected": "Lower confidence text extraction from faded background",
+        "mrz_expected": "Not Applicable",
+        "mrz_applicable": false,
+        "expected_risk_profile": "MEDIUM_RISK",
+        "expected_signals": ["Low Image Contrast", "Reduced Confidence Extraction", "MRZ: Not Applicable"]
+      },
+      "tamper_type": "low_resolution",
+      "demonstrates": "Handling of physical wear, low contrast, and aged document media in adaptive verification."
+    }
+  ]
+}
+
