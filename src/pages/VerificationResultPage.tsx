@@ -195,7 +195,7 @@ export const VerificationResultPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto py-2">
+    <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto py-1 sm:py-2 w-full min-w-0">
       {/* Top Navigation */}
       <div className="flex items-center justify-between">
         <Link
@@ -208,12 +208,12 @@ export const VerificationResultPage: React.FC = () => {
       </div>
 
       {/* A. STATUS HEADER */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 space-y-3 shadow-xl">
+      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 sm:p-5 space-y-3 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
           <div className="flex items-center gap-3">
             <span className="w-3 h-3 rounded-full bg-emerald-400"></span>
             <div>
-              <h1 className="text-base font-bold text-white font-mono uppercase tracking-wider">
+              <h1 className="text-sm sm:text-base font-bold text-white font-mono uppercase tracking-wider">
                 VERIFICATION COMPLETE
               </h1>
               <p className="text-xs text-slate-400 font-mono">
@@ -231,7 +231,7 @@ export const VerificationResultPage: React.FC = () => {
         </div>
 
         {/* Identity Claim / Subject Demographic Attributes */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 text-xs font-mono pt-1">
           <div>
             <span className="text-slate-400 text-[10px] block uppercase tracking-wider">Subject Name</span>
             <span className="font-semibold text-slate-100 truncate block text-xs">{record.subjectName}</span>

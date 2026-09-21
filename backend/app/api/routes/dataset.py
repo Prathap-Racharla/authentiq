@@ -14,22 +14,18 @@ def get_dataset_root() -> Path:
     if env_dir and os.path.isdir(env_dir):
         return Path(env_dir)
 
-    # 1. Try relative to SIH repository root (parents[3] from backend/app/api/routes/dataset.py)
-    candidate_1 = Path(__file__).resolve().parents[3] / "dataset"
-    if candidate_1.is_dir():
-        return candidate_1
+    candidates = [
+        Path(__file__).resolve().parents[4] / "dataset",  # Repository root
+        Path(__file__).resolve().parents[3] / "dataset",
+        Path.cwd() / "dataset",
+        Path.cwd().parent / "dataset",
+        Path("/app/dataset"),
+    ]
+    for c in candidates:
+        if c.is_dir():
+            return c
 
-    # 2. Try current working directory
-    candidate_2 = Path(os.getcwd()) / "dataset"
-    if candidate_2.is_dir():
-        return candidate_2
-
-    # 3. Fallback to parents[2] if run from backend/
-    candidate_3 = Path(__file__).resolve().parents[2] / "dataset"
-    if candidate_3.is_dir():
-        return candidate_3
-
-    return candidate_1
+    return candidates[0]
 
 
 def load_dataset_metadata() -> Dict[str, Any]:

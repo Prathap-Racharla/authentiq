@@ -14,15 +14,15 @@ import { Link } from 'react-router-dom';
 
 export const DashboardPage: React.FC = () => {
   return (
-    <div className="space-y-8 max-w-6xl mx-auto py-2">
+    <div className="space-y-6 sm:space-y-8 max-w-6xl mx-auto py-1 sm:py-2 w-full min-w-0">
       {/* 1. Header & Primary Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800/80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-4 sm:pb-6 border-b border-slate-800/80">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-white font-mono uppercase">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-mono uppercase">
               Identity Verifications
             </h1>
-            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 text-[11px] font-mono font-medium">
+            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 text-[10px] sm:text-[11px] font-mono font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               Live System
             </span>
@@ -32,10 +32,10 @@ export const DashboardPage: React.FC = () => {
           </p>
         </div>
 
-        <div>
+        <div className="w-full sm:w-auto">
           <Link
             to="/verification/new"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-mono font-semibold uppercase tracking-wider transition-all shadow-md shadow-cyan-950 hover:shadow-cyan-900/50 cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-mono font-semibold uppercase tracking-wider transition-all shadow-md shadow-cyan-950 hover:shadow-cyan-900/50 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Verify New Document</span>

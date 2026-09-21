@@ -622,16 +622,16 @@ export const NewVerificationPage: React.FC = () => {
     setIsBenchmarkModalOpen(false);
     try {
       setLoadingDocId(doc.id);
-      const file = await fetchDatasetDocumentFile(doc.id);
+      const file = await fetchDatasetDocumentFile(doc.id, doc.file_path);
       await runDocumentPipeline(file);
     } catch (err: any) {
       console.error(`Error loading dataset document ${doc.id}:`, err);
-      if (doc.category === 'passport') {
+      try {
         const sampleKey = doc.tamper_type === 'mrz_mismatch' ? 'inconsistent' : doc.tamper_type === 'low_resolution' ? 'degraded' : 'clean';
         const file = await fetchSampleFile(sampleKey);
         await runDocumentPipeline(file);
-      } else {
-        alert(`Error loading document ${doc.id}: ${err.message}`);
+      } catch (fallbackErr: any) {
+        console.error('Secondary fallback failed:', fallbackErr);
       }
     } finally {
       setLoadingDocId(null);
