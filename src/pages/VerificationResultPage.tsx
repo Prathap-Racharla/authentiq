@@ -16,7 +16,8 @@ import {
   DocumentAnalysisResponse, 
   toAuthentiqEvidenceItem, 
   fetchSampleFile, 
-  analyzeDocument 
+  analyzeDocument,
+  analyzeDatasetDocument
 } from '../services/documentApi';
 import { BiometricAnalysisResponse } from '../services/biometricApi';
 import { recordAuditEvent } from '../services/auditApi';
@@ -167,8 +168,13 @@ export const VerificationResultPage: React.FC = () => {
 
     setIsLoadingInspection(true);
     try {
-      const sample = await fetchSampleFile('clean');
-      const res = await analyzeDocument(sample);
+      let res: DocumentAnalysisResponse;
+      try {
+        res = await analyzeDatasetDocument('PASS-001');
+      } catch {
+        const sample = await fetchSampleFile('clean');
+        res = await analyzeDocument(sample);
+      }
       setDocAnalysis(res);
       setIsDocInspectionOpen(true);
     } catch (err) {

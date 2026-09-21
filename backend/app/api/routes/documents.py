@@ -64,3 +64,28 @@ async def analyze_document(
             }
         )
 
+
+@router.post(
+    "/analyze-dataset/{doc_id}",
+    response_model=DocumentAnalysisResponse,
+    summary="Directly Analyze Synthetic Dataset Document",
+    description="Loads a synthetic dataset document directly on the server by ID and executes verification with in-memory caching for sub-100ms response."
+)
+async def analyze_dataset_document(doc_id: str):
+    try:
+        return pipeline.analyze_dataset_id(doc_id)
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "DATASET_DOC_NOT_FOUND", "message": str(ve)}
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "DOCUMENT_ANALYSIS_UNAVAILABLE",
+                "message": f"Dataset document analysis failed: {str(exc)}"
+            }
+        )
+
+

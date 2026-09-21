@@ -1,6 +1,15 @@
+import threading
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import documents, biometrics, verification, audit, security, dataset
+from app.services.document.ocr import prewarm_ocr_engine
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Pre-warm OCR engine in background thread on startup
+    threading.Thread(target=prewarm_ocr_engine, daemon=True).start()
+    yield
 
 app = FastAPI(
     title="AuthentiQ — AI-Based Identity Assurance Platform API",
@@ -10,6 +19,7 @@ app = FastAPI(
         "Strictly enforces Decoupled Metric Law (Fraud Risk 0-100 vs Evidence Confidence 0-100) and AI Decision-Support."
     ),
     version="1.0.0",
+    lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
 )

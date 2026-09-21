@@ -27,6 +27,21 @@ def get_rapid_ocr_engine():
     return _RAPID_OCR_ENGINE
 
 
+def prewarm_ocr_engine():
+    """Pre-warm RapidOCR engine at server startup so the first verification has 0 model-load latency."""
+    try:
+        engine = get_rapid_ocr_engine()
+        if engine:
+            dummy_img = Image.new('RGB', (64, 64), color=(255, 255, 255))
+            buf = io.BytesIO()
+            dummy_img.save(buf, format='PNG')
+            engine(buf.getvalue())
+    except Exception:
+        # Non-fatal if RapidOCR is not installed or cannot be prewarmed
+        pass
+
+
+
 class BaseOCRProvider(ABC):
     """Abstract interface for pluggable OCR engines."""
     

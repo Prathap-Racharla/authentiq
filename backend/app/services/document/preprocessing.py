@@ -35,6 +35,27 @@ def prepare_image(data: bytes, mime_type: str) -> ProcessedImage:
         pil_img = Image.open(io.BytesIO(img_bytes))
         pil_img.load()
         width, height = pil_img.size
+
+        # Auto-clamp oversized mobile camera photos (e.g. 4032x3024) to max 1920px
+        # to ensure fast OpenCV quality checks and sub-second OCR inference
+        MAX_DIM = 1920
+        if max(width, height) > MAX_DIM:
+            scale = MAX_DIM / max(width, height)
+            new_w = int(round(width * scale))
+            new_h = int(round(height * scale))
+            pil_img = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            width, height = new_w, new_h
+
+            # Re-encode image bytes
+            buf = io.BytesIO()
+            if pil_img.mode in ("RGBA", "LA", "P"):
+                pil_img.save(buf, format="PNG")
+            else:
+                if pil_img.mode != "RGB":
+                    pil_img = pil_img.convert("RGB")
+                pil_img.save(buf, format="JPEG", quality=90)
+            img_bytes = buf.getvalue()
+
     except Exception as e:
         raise ValueError(f"Corrupted or unreadable image stream: {e}")
 

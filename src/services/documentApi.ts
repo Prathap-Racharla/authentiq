@@ -109,9 +109,13 @@ export async function checkBackendHealth(): Promise<boolean> {
   }
 }
 
+import { compressAndDownscaleImage } from '../utils/imageCompressor';
+
 export async function analyzeDocument(file: File): Promise<DocumentAnalysisResponse> {
+  // Automatically downscale and compress oversized mobile camera photos before upload
+  const optimizedFile = await compressAndDownscaleImage(file);
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('file', optimizedFile);
 
   const res = await fetch('/api/v1/documents/analyze', {
     method: 'POST',
@@ -123,6 +127,25 @@ export async function analyzeDocument(file: File): Promise<DocumentAnalysisRespo
     try {
       const err = await res.json();
       errorDetail = err.detail || errorDetail;
+    } catch {
+      // Fallback
+    }
+    throw new Error(errorDetail);
+  }
+
+  return await res.json();
+}
+
+export async function analyzeDatasetDocument(docId: string): Promise<DocumentAnalysisResponse> {
+  const res = await fetch(`/api/v1/documents/analyze-dataset/${encodeURIComponent(docId)}`, {
+    method: 'POST',
+  });
+
+  if (!res.ok) {
+    let errorDetail = 'Failed to analyze dataset document';
+    try {
+      const err = await res.json();
+      errorDetail = err.detail?.message || err.detail || errorDetail;
     } catch {
       // Fallback
     }

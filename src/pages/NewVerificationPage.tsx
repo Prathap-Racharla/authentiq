@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { 
   analyzeDocument, 
+  analyzeDatasetDocument,
   fetchSampleFile, 
   checkBackendHealth, 
   toAuthentiqEvidenceItem,
@@ -411,10 +412,11 @@ export const NewVerificationPage: React.FC = () => {
    * Main Document Verification Pipeline Execution
    * Completely real analysis: uploads file to backend POST /api/v1/documents/analyze
    */
-  const runDocumentPipeline = async (file: File) => {
+  const runDocumentPipeline = async (input: File | { datasetDocId: string; filename: string }) => {
     const newSessionId = `VER-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     setVerificationId(newSessionId);
-    setUploadedFilename(file.name);
+    const fname = input instanceof File ? input.name : input.filename;
+    setUploadedFilename(fname);
     setFlowState('processing');
     setDocAnalysisError(null);
 
@@ -442,8 +444,20 @@ export const NewVerificationPage: React.FC = () => {
     }, 280);
 
     try {
-      // Real backend OCR and OpenCV pipeline call
-      const response = await analyzeDocument(file);
+      // Execute document analysis (direct dataset endpoint for samples, or multi-part upload for files)
+      let response: DocumentAnalysisResponse;
+      if (input instanceof File) {
+        response = await analyzeDocument(input);
+      } else {
+        try {
+          response = await analyzeDatasetDocument(input.datasetDocId);
+        } catch {
+          // Fallback if direct dataset endpoint fails
+          const file = await fetchDatasetDocumentFile(input.datasetDocId);
+          response = await analyzeDocument(file);
+        }
+      }
+
       clearTimeout(stepTimer);
       setActiveAnalysis(response);
 
@@ -613,8 +627,10 @@ export const NewVerificationPage: React.FC = () => {
     setIsBenchmarkModalOpen(false);
     try {
       setLoadingDocId(doc.id);
-      const file = await fetchDatasetDocumentFile(doc.id, doc.file_path);
-      await runDocumentPipeline(file);
+      await runDocumentPipeline({
+        datasetDocId: doc.id,
+        filename: `${doc.id.toLowerCase()}.png`
+      });
     } catch (err: any) {
       console.error(`Error loading dataset document ${doc.id}:`, err);
       try {
