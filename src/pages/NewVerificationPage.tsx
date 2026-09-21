@@ -910,6 +910,7 @@ export const NewVerificationPage: React.FC = () => {
             recommendation={recommendation}
             recommendationReason={recommendationReason}
             evidenceMap={activeEvidenceMap}
+            documentType={detectedType}
           />
 
           {/* LEVEL 1: Key Findings List */}

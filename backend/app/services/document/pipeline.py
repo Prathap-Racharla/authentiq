@@ -335,14 +335,14 @@ def detect_document_type(raw_text: str, filename: str, mrz_detected: bool) -> st
     text_upper = raw_text.upper()
     fname_lower = filename.lower()
 
-    if mrz_detected or "PASSPORT" in text_upper or "P<" in text_upper or "pass_" in fname_lower or "passport" in fname_lower:
-        return "PASSPORT"
     if "AADHAAR" in text_upper or "UIDAI" in text_upper or "UNIQUE IDENTIFICATION" in text_upper or "ENROLMENT" in text_upper or "aad_" in fname_lower or "aadhaar" in fname_lower or re.search(r'\b[0-9]{4}\s[0-9]{4}\s[0-9]{4}\b', text_upper):
         return "AADHAAR_STYLE"
     if "DRIVING LICENCE" in text_upper or "DRIVING LICENSE" in text_upper or "UNION OF INDIA DRIVING" in text_upper or "dl_" in fname_lower or "dl-" in text_upper or "driving" in fname_lower or "MCWG" in text_upper or "LMV" in text_upper:
         return "DRIVING_LICENCE"
     if "ELECTION COMMISSION" in text_upper or "ELECTOR" in text_upper or "VOTER" in text_upper or "EPIC" in text_upper or "vot_" in fname_lower or "voter" in fname_lower:
         return "VOTER_ID"
+    if mrz_detected or "PASSPORT" in text_upper or "P<" in text_upper or "pass_" in fname_lower or "passport" in fname_lower:
+        return "PASSPORT"
     return "UNKNOWN"
 
 

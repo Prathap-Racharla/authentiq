@@ -76,13 +76,21 @@ export const DecisionSummaryCard: React.FC<DecisionSummaryCardProps> = ({
   if (evidenceMap?.document?.signals) {
     const signals = evidenceMap.document.signals;
     const docTypeLower = (documentType || '').toLowerCase();
-    const isPassport = docTypeLower.includes('passport') || signals.some(s => s.label.toLowerCase().includes('mrz') && !s.label.toLowerCase().includes('not applicable'));
-    const isAadhaar = docTypeLower.includes('aadhaar') || signals.some(s => s.label.toLowerCase().includes('uidai'));
-    const isDl = docTypeLower.includes('driving') || signals.some(s => s.label.toLowerCase().includes('licence'));
-    const isVoter = docTypeLower.includes('voter') || signals.some(s => s.label.toLowerCase().includes('epic'));
+
+    // Check if signals or docType identify Aadhaar, DL, or Voter ID
+    const isAadhaar = docTypeLower.includes('aadhaar') || 
+                      signals.some(s => s.label.toLowerCase().includes('uidai') || s.description.toLowerCase().includes('aadhaar'));
+    const isDl = docTypeLower.includes('driving') || docTypeLower.includes('licence') || 
+                 signals.some(s => s.label.toLowerCase().includes('licence') || s.description.toLowerCase().includes('driving'));
+    const isVoter = docTypeLower.includes('voter') || 
+                    signals.some(s => s.label.toLowerCase().includes('epic') || s.description.toLowerCase().includes('voter'));
+
+    // isPassport ONLY if explicitly passport or if NOT any of the other 3 AND has genuine MRZ Checksum signal
+    const isPassport = docTypeLower.includes('passport') || 
+                       (!isAadhaar && !isDl && !isVoter && signals.some(s => s.label.toLowerCase() === 'mrz checksum' || s.label.toLowerCase() === 'valid mrz'));
 
     if (isPassport) {
-      const mrzSig = signals.find(s => s.label.toLowerCase().includes('mrz'));
+      const mrzSig = signals.find(s => s.label.toLowerCase().includes('mrz') && !s.label.toLowerCase().includes('format'));
       if (mrzSig) {
         const isMrzValid = mrzSig.impact === 'positive';
         decisiveFactors.push({
@@ -93,7 +101,7 @@ export const DecisionSummaryCard: React.FC<DecisionSummaryCardProps> = ({
       }
     } else if (isAadhaar) {
       const uidSig = signals.find(s => s.label.toLowerCase().includes('uidai'));
-      const isValid = uidSig ? uidSig.impact === 'positive' : true;
+      const isValid = uidSig ? uidSig.impact !== 'risk' : true;
       decisiveFactors.push({
         label: 'UIDAI format',
         value: isValid ? 'Valid (12-digit UIDAI structure)' : 'UIDAI format irregularity flagged',
@@ -101,7 +109,7 @@ export const DecisionSummaryCard: React.FC<DecisionSummaryCardProps> = ({
       });
     } else if (isDl) {
       const dlSig = signals.find(s => s.label.toLowerCase().includes('licence'));
-      const isValid = dlSig ? dlSig.impact === 'positive' : true;
+      const isValid = dlSig ? dlSig.impact !== 'risk' : true;
       decisiveFactors.push({
         label: 'Licence structure',
         value: isValid ? 'Valid (RTO format & active validity window)' : 'Licence validity or format defect flagged',
@@ -109,7 +117,7 @@ export const DecisionSummaryCard: React.FC<DecisionSummaryCardProps> = ({
       });
     } else if (isVoter) {
       const epicSig = signals.find(s => s.label.toLowerCase().includes('epic'));
-      const isValid = epicSig ? epicSig.impact === 'positive' : true;
+      const isValid = epicSig ? epicSig.impact !== 'risk' : true;
       decisiveFactors.push({
         label: 'EPIC format',
         value: isValid ? 'Valid (10-char alphanumeric EPIC structure)' : 'EPIC format discrepancy flagged',
@@ -117,7 +125,7 @@ export const DecisionSummaryCard: React.FC<DecisionSummaryCardProps> = ({
       });
     } else {
       const credSig = signals.find(s => s.label.toLowerCase().includes('structure') || s.label.toLowerCase().includes('credential'));
-      const isValid = credSig ? credSig.impact === 'positive' : true;
+      const isValid = credSig ? credSig.impact !== 'risk' : true;
       decisiveFactors.push({
         label: 'Credential format',
         value: isValid ? 'Valid (Visual layout & format verified)' : 'Format irregularity flagged',
