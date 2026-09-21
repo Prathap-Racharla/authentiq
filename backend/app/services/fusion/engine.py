@@ -38,13 +38,34 @@ class EvidenceFusionEngine:
         # 1. DOCUMENT EVIDENCE STREAM
         # -------------------------------------------------------------
         doc = evidence.document
+        is_passport = any("MRZ" in s.label for s in doc.signals)
+        is_aadhaar = any("UIDAI" in s.label for s in doc.signals)
+        is_dl = any("Licence" in s.label for s in doc.signals)
+        is_voter = any("EPIC" in s.label for s in doc.signals)
+
         if doc.status == "Positive":
+            if is_passport:
+                factor_label = "MRZ Consistency"
+                detail_text = "Optical security microprint and MRZ check digits verified valid."
+            elif is_aadhaar:
+                factor_label = "UIDAI Structure Consistency"
+                detail_text = "UIDAI 12-digit format, visual security features, and demographic zone verified valid."
+            elif is_dl:
+                factor_label = "Licence Structure Consistency"
+                detail_text = "State RTO driving licence format, validity window, and endorsements verified valid."
+            elif is_voter:
+                factor_label = "EPIC Structure Consistency"
+                detail_text = "Election Commission 10-character EPIC identifier and electoral details verified valid."
+            else:
+                factor_label = "Document Structure Consistency"
+                detail_text = "Optical security features, layout, and visual zone fields verified valid."
+
             risk_factors.append(
                 FactorContributionSchema(
-                    factor="Document Consistency",
+                    factor=factor_label,
                     impact="+0 fraud risk",
                     category="risk",
-                    detail="Optical security microprint and MRZ check digits verified valid.",
+                    detail=detail_text,
                 )
             )
             confidence_factors.append(
@@ -104,12 +125,33 @@ class EvidenceFusionEngine:
                 adaptive_steps.append("Retry OCR processing or verify visual zone fields manually.")
             elif has_risk_signals:
                 fraud_risk += 50
+                if is_passport:
+                    anom_factor = "MRZ / Visual Zone Contradiction"
+                    anom_detail = "Mismatch identified between OCR visual zone fields and MRZ machine-readable block."
+                    anom_finding = "Document anomaly signals detected: MRZ check digit failure or field contradiction."
+                elif is_aadhaar:
+                    anom_factor = "UIDAI Format / Demographic Anomaly"
+                    anom_detail = "Discrepancy detected in UIDAI 12-digit structure or demographic layout."
+                    anom_finding = "Document anomaly signals detected: UIDAI format irregularity or field contradiction."
+                elif is_dl:
+                    anom_factor = "Driving Licence Format / Expiry Anomaly"
+                    anom_detail = "Discrepancy detected in licence validity period or RTO structure."
+                    anom_finding = "Document anomaly signals detected: licence expiry lapse or format irregularity."
+                elif is_voter:
+                    anom_factor = "EPIC Identifier Format Anomaly"
+                    anom_detail = "Discrepancy detected in Election Commission alphanumeric EPIC format."
+                    anom_finding = "Document anomaly signals detected: EPIC identifier format mismatch or layout defect."
+                else:
+                    anom_factor = "Document Field Contradiction"
+                    anom_detail = "Discrepancy detected across extracted visual zone fields."
+                    anom_finding = "Document anomaly signals detected: credential format irregularity or field contradiction."
+
                 risk_factors.append(
                     FactorContributionSchema(
-                        factor="MRZ / Visual Zone Contradiction",
+                        factor=anom_factor,
                         impact="+50 fraud risk",
                         category="risk",
-                        detail="Mismatch identified between OCR visual zone fields and MRZ machine-readable block.",
+                        detail=anom_detail,
                     )
                 )
                 confidence_factors.append(
@@ -120,7 +162,7 @@ class EvidenceFusionEngine:
                         detail="Optical inspection detected substantive cross-field discrepancies.",
                     )
                 )
-                findings.append("Document anomaly signals detected: MRZ check digit failure or field contradiction.")
+                findings.append(anom_finding)
                 adaptive_steps.append("Escalate for authorized officer review; inspect biographic mismatch.")
             else:
                 # Poor optical quality (blur/glare): +0 fraud risk

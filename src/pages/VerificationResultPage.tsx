@@ -117,9 +117,6 @@ export const VerificationResultPage: React.FC = () => {
           };
         }
 
-        // 4. Re-evaluate transparent decision engine with the new multi-modal evidence
-        const evaluation = evaluateEvidence(updatedEvidence);
-
         // Extract structured fields from document analysis if available
         const docFields = docAnalysis?.structured_fields || [];
         const docName = docFields.find(f => f.field === 'full_name')?.value;
@@ -127,11 +124,14 @@ export const VerificationResultPage: React.FC = () => {
         const docNat = docFields.find(f => f.field === 'nationality')?.value;
         const docDob = docFields.find(f => f.field === 'date_of_birth')?.value;
 
+        const effectiveDocType = intakeData?.formData?.documentType || docAnalysis?.document_type || prev.documentType;
         const effectiveName = intakeData?.formData?.fullName || docName || prev.subjectName;
         const effectiveDocNum = intakeData?.formData?.documentNumber || docNum || '';
         const effectiveNat = intakeData?.formData?.nationality || docNat || prev.nationality;
         const effectiveDob = intakeData?.formData?.dob || docDob || prev.dob;
-        const effectiveDocType = intakeData?.formData?.documentType || prev.documentType;
+
+        // 4. Re-evaluate transparent decision engine with the new multi-modal evidence
+        const evaluation = evaluateEvidence(updatedEvidence, effectiveDocType);
 
         const maskedNum = effectiveDocNum
           ? (effectiveDocNum.length > 4 ? `${effectiveDocNum.slice(0, 4)}-XXXX` : `${effectiveDocNum}-XXXX`)
@@ -262,6 +262,7 @@ export const VerificationResultPage: React.FC = () => {
         riskFactors={record.riskFactors}
         confidenceFactors={record.confidenceFactors}
         evidenceMap={record.evidence}
+        documentType={record.documentType}
       />
 
       {/* C. KEY FINDINGS LIST */}

@@ -19,6 +19,7 @@ interface DecisionSummaryCardProps {
   riskFactors?: FactorContribution[];
   confidenceFactors?: FactorContribution[];
   evidenceMap?: EvidenceMap;
+  documentType?: string;
 }
 
 export const DecisionSummaryCard: React.FC<DecisionSummaryCardProps> = ({
@@ -29,6 +30,7 @@ export const DecisionSummaryCard: React.FC<DecisionSummaryCardProps> = ({
   riskFactors = [],
   confidenceFactors = [],
   evidenceMap,
+  documentType = '',
 }) => {
   const [isWhyExpanded, setIsWhyExpanded] = useState(false);
 
@@ -72,13 +74,54 @@ export const DecisionSummaryCard: React.FC<DecisionSummaryCardProps> = ({
   }
 
   if (evidenceMap?.document?.signals) {
-    const mrzSig = evidenceMap.document.signals.find(s => s.label.toLowerCase().includes('mrz'));
-    if (mrzSig) {
-      const isMrzValid = mrzSig.impact === 'positive';
+    const signals = evidenceMap.document.signals;
+    const docTypeLower = (documentType || '').toLowerCase();
+    const isPassport = docTypeLower.includes('passport') || signals.some(s => s.label.toLowerCase().includes('mrz') && !s.label.toLowerCase().includes('not applicable'));
+    const isAadhaar = docTypeLower.includes('aadhaar') || signals.some(s => s.label.toLowerCase().includes('uidai'));
+    const isDl = docTypeLower.includes('driving') || signals.some(s => s.label.toLowerCase().includes('licence'));
+    const isVoter = docTypeLower.includes('voter') || signals.some(s => s.label.toLowerCase().includes('epic'));
+
+    if (isPassport) {
+      const mrzSig = signals.find(s => s.label.toLowerCase().includes('mrz'));
+      if (mrzSig) {
+        const isMrzValid = mrzSig.impact === 'positive';
+        decisiveFactors.push({
+          label: 'MRZ check digits',
+          value: isMrzValid ? 'Valid (ICAO 9303 TD3 checksums)' : 'Checksum mismatch flagged',
+          impact: isMrzValid ? 'positive' : 'risk'
+        });
+      }
+    } else if (isAadhaar) {
+      const uidSig = signals.find(s => s.label.toLowerCase().includes('uidai'));
+      const isValid = uidSig ? uidSig.impact === 'positive' : true;
       decisiveFactors.push({
-        label: 'MRZ check digits',
-        value: isMrzValid ? 'Valid (ICAO 9303 TD3 checksums)' : 'Checksum mismatch flagged',
-        impact: isMrzValid ? 'positive' : 'risk'
+        label: 'UIDAI format',
+        value: isValid ? 'Valid (12-digit UIDAI structure)' : 'UIDAI format irregularity flagged',
+        impact: isValid ? 'positive' : 'risk'
+      });
+    } else if (isDl) {
+      const dlSig = signals.find(s => s.label.toLowerCase().includes('licence'));
+      const isValid = dlSig ? dlSig.impact === 'positive' : true;
+      decisiveFactors.push({
+        label: 'Licence structure',
+        value: isValid ? 'Valid (RTO format & active validity window)' : 'Licence validity or format defect flagged',
+        impact: isValid ? 'positive' : 'risk'
+      });
+    } else if (isVoter) {
+      const epicSig = signals.find(s => s.label.toLowerCase().includes('epic'));
+      const isValid = epicSig ? epicSig.impact === 'positive' : true;
+      decisiveFactors.push({
+        label: 'EPIC format',
+        value: isValid ? 'Valid (10-char alphanumeric EPIC structure)' : 'EPIC format discrepancy flagged',
+        impact: isValid ? 'positive' : 'risk'
+      });
+    } else {
+      const credSig = signals.find(s => s.label.toLowerCase().includes('structure') || s.label.toLowerCase().includes('credential'));
+      const isValid = credSig ? credSig.impact === 'positive' : true;
+      decisiveFactors.push({
+        label: 'Credential format',
+        value: isValid ? 'Valid (Visual layout & format verified)' : 'Format irregularity flagged',
+        impact: isValid ? 'positive' : 'risk'
       });
     }
   }

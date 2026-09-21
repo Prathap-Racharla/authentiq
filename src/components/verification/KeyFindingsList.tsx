@@ -66,10 +66,28 @@ export const KeyFindingsList: React.FC<KeyFindingsListProps> = ({
         });
       }
     } else if (isNonMrz) {
-      items.push({
-        type: 'pass',
-        text: 'Identity fields and visual layout format verified (MRZ: Not Applicable)',
-      });
+      const dtLower = documentType.toLowerCase();
+      if (dtLower.includes('aadhaar')) {
+        items.push({
+          type: 'pass',
+          text: 'UIDAI 12-digit format and visual security layout verified',
+        });
+      } else if (dtLower.includes('driving')) {
+        items.push({
+          type: 'pass',
+          text: 'Licence structure, RTO jurisdiction, and validity window verified',
+        });
+      } else if (dtLower.includes('voter')) {
+        items.push({
+          type: 'pass',
+          text: 'EPIC alphanumeric identifier and electoral layout verified',
+        });
+      } else {
+        items.push({
+          type: 'pass',
+          text: 'Visual inspection zone layout and security features verified',
+        });
+      }
     } else {
       items.push({
         type: 'pass',

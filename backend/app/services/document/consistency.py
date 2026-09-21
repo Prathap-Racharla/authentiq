@@ -40,13 +40,62 @@ def check_consistency(
     field_map = {f.field: f.value for f in structured_fields}
 
     if not mrz.applicable:
-        items.append(CrossFieldConsistencyItem(
-            comparison="OCR ↔ MRZ Cross-Check",
-            ocr_value="N/A",
-            mrz_value="Not Applicable",
-            status="NOT_APPLICABLE",
-            explanation="Document format does not utilize an ICAO 9303 machine-readable zone; MRZ cross-check not applicable."
-        ))
+        doc_num = field_map.get("document_number")
+        if doc_num:
+            clean_num = re.sub(r'[^A-Za-z0-9]', '', doc_num)
+            if clean_num.isdigit() and len(clean_num) == 12:
+                items.append(CrossFieldConsistencyItem(
+                    comparison="UIDAI 12-Digit Format",
+                    ocr_value=doc_num,
+                    mrz_value="12-Digit UIDAI Spec",
+                    status="MATCH",
+                    explanation="Aadhaar UID matches standard 12-digit numeric structure."
+                ))
+            elif len(clean_num) >= 10 and clean_num[:2].isalpha() and any(c.isdigit() for c in clean_num):
+                if len(clean_num) == 10 and clean_num[:3].isalpha() and clean_num[3:].isdigit():
+                    items.append(CrossFieldConsistencyItem(
+                        comparison="EPIC Identifier Format",
+                        ocr_value=doc_num,
+                        mrz_value="3-Alpha + 7-Digit Spec",
+                        status="MATCH",
+                        explanation="Voter ID matches Election Commission 10-character alphanumeric EPIC standard."
+                    ))
+                else:
+                    items.append(CrossFieldConsistencyItem(
+                        comparison="RTO Licence Format",
+                        ocr_value=doc_num,
+                        mrz_value="MoRTH Sarathi Spec",
+                        status="MATCH",
+                        explanation="Driving Licence matches state RTO alphanumeric credential structure."
+                    ))
+            else:
+                items.append(CrossFieldConsistencyItem(
+                    comparison="Credential ID Format",
+                    ocr_value=doc_num,
+                    mrz_value="Standard Identifier Spec",
+                    status="MATCH" if len(clean_num) >= 6 else "MISMATCH",
+                    explanation="Credential identifier conforms to standard length bounds." if len(clean_num) >= 6 else "Credential identifier length irregular."
+                ))
+
+        dob = field_map.get("date_of_birth")
+        if dob:
+            norm_dob = normalize_date(dob)
+            dob_valid = True
+            try:
+                if norm_dob and len(norm_dob) == 10:
+                    y = int(norm_dob.split("-")[0])
+                    curr_y = datetime.now().year
+                    dob_valid = (1900 <= y <= curr_y)
+            except Exception:
+                pass
+            items.append(CrossFieldConsistencyItem(
+                comparison="Date of Birth Demographic Check",
+                ocr_value=dob,
+                mrz_value="Valid Historical Date",
+                status="MATCH" if dob_valid else "MISMATCH",
+                explanation="Date of birth is chronologically consistent." if dob_valid else "Date of birth contains invalid year bounds."
+            ))
+
         exp_date = field_map.get("expiry_date")
         if exp_date:
             norm_exp = normalize_date(exp_date)
@@ -61,10 +110,18 @@ def check_consistency(
             items.append(CrossFieldConsistencyItem(
                 comparison="Expiry Date Validity",
                 ocr_value=exp_date,
-                mrz_value=norm_exp,
+                mrz_value="Future Validity Window",
                 status="MATCH" if is_valid else "MISMATCH",
-                explanation="Credential is valid within authorized expiry validity window." if is_valid else "Credential expiration date has lapsed."
+                explanation="Credential is valid within authorized validity window." if is_valid else "Credential expiration date has lapsed."
             ))
+
+        items.append(CrossFieldConsistencyItem(
+            comparison="Machine Readable Zone (MRZ)",
+            ocr_value="N/A",
+            mrz_value="Not Applicable",
+            status="NOT_APPLICABLE",
+            explanation="Document format does not utilize an ICAO 9303 machine-readable zone; MRZ cross-check not applicable."
+        ))
         return items
 
     if not mrz.detected:

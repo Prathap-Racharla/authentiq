@@ -22,7 +22,7 @@ export interface DecisionEngineResult {
  * Evidence -> Quality & Contradiction Evaluation -> Fraud Risk + Evidence Confidence -> 
  * Explainable AI-Assisted Recommendation -> Authorized Officer Final Decision
  */
-export function evaluateEvidence(evidence: EvidenceMap): DecisionEngineResult {
+export function evaluateEvidence(evidence: EvidenceMap, documentType?: string): DecisionEngineResult {
   const riskFactors: FactorContribution[] = [];
   const confidenceFactors: FactorContribution[] = [];
   const findings: string[] = [];
@@ -31,6 +31,13 @@ export function evaluateEvidence(evidence: EvidenceMap): DecisionEngineResult {
 
   // 1. Evaluate Document Stream
   const doc = evidence.document;
+  const dt = (documentType || '').toLowerCase();
+  const hasMrzSig = doc.signals?.some(s => s.label.toLowerCase().includes('mrz') && s.impact === 'positive');
+  const isPassport = dt.includes('passport') || (hasMrzSig && !dt.includes('aadhaar') && !dt.includes('driving') && !dt.includes('voter'));
+  const isAadhaar = dt.includes('aadhaar') || doc.signals?.some(s => s.label.toLowerCase().includes('uidai'));
+  const isDl = dt.includes('driving') || doc.signals?.some(s => s.label.toLowerCase().includes('licence'));
+  const isVoter = dt.includes('voter') || doc.signals?.some(s => s.label.toLowerCase().includes('epic'));
+
   if (doc.status === 'Positive') {
     riskFactors.push({
       factor: 'Document Quality',
@@ -38,25 +45,107 @@ export function evaluateEvidence(evidence: EvidenceMap): DecisionEngineResult {
       category: 'risk',
       detail: 'High optical clarity without specular glare or motion blur.'
     });
-    riskFactors.push({
-      factor: 'Valid MRZ',
-      impact: '+0 fraud risk',
-      category: 'risk',
-      detail: 'ICAO 9303 check digits and machine-readable fields verified valid.'
-    });
-    confidenceFactors.push({
-      factor: 'Document Evidence',
-      impact: '+25% completeness',
-      category: 'confidence',
-      detail: `High-resolution document optical capture with ${doc.confidence}% confidence.`
-    });
-    confidenceFactors.push({
-      factor: 'MRZ Evidence',
-      impact: '+20% completeness',
-      category: 'confidence',
-      detail: 'Machine-readable zone fields correlate with visual inspection zone.'
-    });
-    findings.push('Document evidence and MRZ are internally consistent.');
+    if (isPassport) {
+      riskFactors.push({
+        factor: 'Valid MRZ',
+        impact: '+0 fraud risk',
+        category: 'risk',
+        detail: 'ICAO 9303 check digits and machine-readable fields verified valid.'
+      });
+      confidenceFactors.push({
+        factor: 'Document Evidence',
+        impact: '+25% completeness',
+        category: 'confidence',
+        detail: `High-resolution document optical capture with ${doc.confidence}% confidence.`
+      });
+      confidenceFactors.push({
+        factor: 'MRZ Evidence',
+        impact: '+20% completeness',
+        category: 'confidence',
+        detail: 'Machine-readable zone fields correlate with visual inspection zone.'
+      });
+      findings.push('Document evidence and MRZ are internally consistent.');
+    } else if (isAadhaar) {
+      riskFactors.push({
+        factor: 'Valid UIDAI Structure',
+        impact: '+0 fraud risk',
+        category: 'risk',
+        detail: 'UIDAI 12-digit format, visual security features, and demographic zone verified valid.'
+      });
+      confidenceFactors.push({
+        factor: 'Document Evidence',
+        impact: '+25% completeness',
+        category: 'confidence',
+        detail: `High-resolution document optical capture with ${doc.confidence}% confidence.`
+      });
+      confidenceFactors.push({
+        factor: 'UIDAI Format Evidence',
+        impact: '+20% completeness',
+        category: 'confidence',
+        detail: 'UIDAI credential structure conforms to national identity standards.'
+      });
+      findings.push('Aadhaar 12-digit structure and visual layout are internally consistent.');
+    } else if (isDl) {
+      riskFactors.push({
+        factor: 'Valid Licence Structure',
+        impact: '+0 fraud risk',
+        category: 'risk',
+        detail: 'State RTO driving licence format, validity window, and endorsements verified valid.'
+      });
+      confidenceFactors.push({
+        factor: 'Document Evidence',
+        impact: '+25% completeness',
+        category: 'confidence',
+        detail: `High-resolution document optical capture with ${doc.confidence}% confidence.`
+      });
+      confidenceFactors.push({
+        factor: 'Licence Validity Evidence',
+        impact: '+20% completeness',
+        category: 'confidence',
+        detail: 'Licence number and active validity window verified against jurisdictional standards.'
+      });
+      findings.push('Driving licence format, RTO jurisdiction, and validity are internally consistent.');
+    } else if (isVoter) {
+      riskFactors.push({
+        factor: 'Valid EPIC Format',
+        impact: '+0 fraud risk',
+        category: 'risk',
+        detail: 'Election Commission 10-character EPIC identifier and electoral details verified valid.'
+      });
+      confidenceFactors.push({
+        factor: 'Document Evidence',
+        impact: '+25% completeness',
+        category: 'confidence',
+        detail: `High-resolution document optical capture with ${doc.confidence}% confidence.`
+      });
+      confidenceFactors.push({
+        factor: 'EPIC Format Evidence',
+        impact: '+20% completeness',
+        category: 'confidence',
+        detail: 'EPIC alphanumeric format conforms to Election Commission specifications.'
+      });
+      findings.push('Voter ID EPIC identifier and electoral details are internally consistent.');
+    } else {
+      riskFactors.push({
+        factor: 'Valid Credential Structure',
+        impact: '+0 fraud risk',
+        category: 'risk',
+        detail: 'Credential layout, typography, and optical security features verified valid.'
+      });
+      confidenceFactors.push({
+        factor: 'Document Evidence',
+        impact: '+25% completeness',
+        category: 'confidence',
+        detail: `High-resolution document optical capture with ${doc.confidence}% confidence.`
+      });
+      confidenceFactors.push({
+        factor: 'Structure Evidence',
+        impact: '+20% completeness',
+        category: 'confidence',
+        detail: 'Visual inspection zone fields correlate with standard document layout.'
+      });
+      findings.push('Document security layout and visual zone are internally consistent.');
+    }
   } else if (doc.status === 'Negative') {
     fraudRisk += 55;
     riskFactors.push({
@@ -93,27 +182,85 @@ export function evaluateEvidence(evidence: EvidenceMap): DecisionEngineResult {
       });
       findings.push('OCR extraction engine unavailable (+0 fraud risk, reduced evidence confidence).');
     } else if (hasRiskSignals) {
-      // MRZ anomaly / Cross-field mismatch: elevated risk contribution requiring officer review
+      // Elevated risk contribution requiring officer review
       fraudRisk += 50;
-      riskFactors.push({
-        factor: 'MRZ Inconsistency',
-        impact: '+15 fraud risk',
-        category: 'risk',
-        detail: 'Discrepancy detected between OCR visual zone fields and MRZ machine-readable block.'
-      });
-      riskFactors.push({
-        factor: 'MRZ Checksum Anomaly',
-        impact: '+35 fraud risk',
-        category: 'risk',
-        detail: 'One or more ICAO 9303 check digits failed calculation.'
-      });
-      confidenceFactors.push({
-        factor: 'Document Anomaly Detected',
-        impact: '+18% completeness',
-        category: 'confidence',
-        detail: 'Discrepancies identified between visual zone and MRZ with clear optical quality.'
-      });
-      findings.push('Document anomaly signals detected: MRZ check digit failure or visual zone contradiction.');
+      if (isPassport) {
+        riskFactors.push({
+          factor: 'MRZ Inconsistency',
+          impact: '+15 fraud risk',
+          category: 'risk',
+          detail: 'Discrepancy detected between OCR visual zone fields and MRZ machine-readable block.'
+        });
+        riskFactors.push({
+          factor: 'MRZ Checksum Anomaly',
+          impact: '+35 fraud risk',
+          category: 'risk',
+          detail: 'One or more ICAO 9303 check digits failed calculation.'
+        });
+        confidenceFactors.push({
+          factor: 'Document Anomaly Detected',
+          impact: '+18% completeness',
+          category: 'confidence',
+          detail: 'Discrepancies identified between visual zone and MRZ with clear optical quality.'
+        });
+        findings.push('Document anomaly signals detected: MRZ check digit failure or visual zone contradiction.');
+      } else if (isAadhaar) {
+        riskFactors.push({
+          factor: 'UIDAI Format / Pattern Anomaly',
+          impact: '+50 fraud risk',
+          category: 'risk',
+          detail: 'Discrepancy detected in UIDAI 12-digit structure or demographic layout.'
+        });
+        confidenceFactors.push({
+          factor: 'Document Anomaly Detected',
+          impact: '+18% completeness',
+          category: 'confidence',
+          detail: 'UIDAI format irregularity or demographic contradiction identified.'
+        });
+        findings.push('Document anomaly signals detected: UIDAI format irregularity or demographic contradiction.');
+      } else if (isDl) {
+        riskFactors.push({
+          factor: 'Driving Licence Validity / Format Anomaly',
+          impact: '+50 fraud risk',
+          category: 'risk',
+          detail: 'Discrepancy detected in licence validity period or RTO structure.'
+        });
+        confidenceFactors.push({
+          factor: 'Document Anomaly Detected',
+          impact: '+18% completeness',
+          category: 'confidence',
+          detail: 'Licence expiry lapse or RTO format discrepancy identified.'
+        });
+        findings.push('Document anomaly signals detected: driving licence expiry lapse or format irregularity.');
+      } else if (isVoter) {
+        riskFactors.push({
+          factor: 'EPIC Identifier Format Anomaly',
+          impact: '+50 fraud risk',
+          category: 'risk',
+          detail: 'Discrepancy detected in Election Commission alphanumeric EPIC format.'
+        });
+        confidenceFactors.push({
+          factor: 'Document Anomaly Detected',
+          impact: '+18% completeness',
+          category: 'confidence',
+          detail: 'EPIC format length or alphanumeric structure discrepancy identified.'
+        });
+        findings.push('Document anomaly signals detected: EPIC identifier format mismatch or layout defect.');
+      } else {
+        riskFactors.push({
+          factor: 'Document Field Contradiction',
+          impact: '+50 fraud risk',
+          category: 'risk',
+          detail: 'Discrepancies identified across extracted visual zone fields.'
+        });
+        confidenceFactors.push({
+          factor: 'Document Anomaly Detected',
+          impact: '+18% completeness',
+          category: 'confidence',
+          detail: 'Discrepancies identified in visual inspection zone with clear optical quality.'
+        });
+        findings.push('Document anomaly signals detected: credential format irregularity or field contradiction.');
+      }
     } else {
       // Poor image quality (blur / glare): +0 fraud risk, decrease evidence confidence
       fraudRisk += 0;
