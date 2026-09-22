@@ -27,17 +27,28 @@ export async function fetchAuditEvents(
     const res = await fetch(`${API_BASE_URL}/audit?${params.toString()}`);
     if (res.ok) {
       const data = await res.json();
-      return data.map((d: any) => ({
-        eventId: d.event_id,
-        verificationId: d.verification_id,
-        timestamp: d.timestamp,
-        actor: d.actor,
-        eventType: d.event_type as any,
-        prevHash: d.previous_hash,
-        currentHash: d.current_hash,
-        integrity: (d.integrity_state === 'VERIFIED' ? 'VERIFIED' : 'FLAGGED') as 'VERIFIED' | 'FLAGGED',
-        payloadSummary: d.payload_summary,
-      }));
+      return data.map((d: any) => {
+        let integrity: 'VERIFIED' | 'FLAGGED' | 'IN PROGRESS' = 'IN PROGRESS';
+        if (d.integrity_state === 'VERIFIED' || d.integrity_state === 'VALID') {
+          integrity = 'VERIFIED';
+        } else if (d.integrity_state === 'COMPROMISED' || d.integrity_state === 'FLAGGED') {
+          integrity = 'FLAGGED';
+        } else if (d.integrity_state === 'IN PROGRESS') {
+          integrity = 'IN PROGRESS';
+        }
+
+        return {
+          eventId: d.event_id,
+          verificationId: d.verification_id,
+          timestamp: d.timestamp,
+          actor: d.actor,
+          eventType: d.event_type as any,
+          prevHash: d.previous_hash,
+          currentHash: d.current_hash,
+          integrity,
+          payloadSummary: d.payload_summary,
+        };
+      });
     }
   } catch (err) {
     console.warn('Audit API unreachable, using local prototype ledger:', err);
@@ -67,6 +78,15 @@ export async function recordAuditEvent(
 
     if (res.ok) {
       const d = await res.json();
+      let integrity: 'VERIFIED' | 'FLAGGED' | 'IN PROGRESS' = 'IN PROGRESS';
+      if (d.integrity_state === 'VERIFIED' || d.integrity_state === 'VALID') {
+        integrity = 'VERIFIED';
+      } else if (d.integrity_state === 'COMPROMISED' || d.integrity_state === 'FLAGGED') {
+        integrity = 'FLAGGED';
+      } else if (d.integrity_state === 'IN PROGRESS') {
+        integrity = 'IN PROGRESS';
+      }
+
       return {
         eventId: d.event_id,
         verificationId: d.verification_id,
@@ -75,7 +95,7 @@ export async function recordAuditEvent(
         eventType: d.event_type as any,
         prevHash: d.previous_hash,
         currentHash: d.current_hash,
-        integrity: (d.integrity_state === 'VERIFIED' ? 'VERIFIED' : 'FLAGGED') as 'VERIFIED' | 'FLAGGED',
+        integrity,
         payloadSummary: d.payload_summary,
       };
     }

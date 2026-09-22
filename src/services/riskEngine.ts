@@ -184,6 +184,25 @@ export function evaluateEvidence(evidence: EvidenceMap, documentType?: string): 
     } else if (hasRiskSignals) {
       // Elevated risk contribution requiring officer review
       fraudRisk += 50;
+      // Check whether anomalies are high-consequence fraud/tampering/expiry or format irregularities
+      const isHighTamper = doc.signals.some(s => 
+        s.label.toLowerCase().includes('integrity') ||
+        s.label.toLowerCase().includes('validity') ||
+        s.description.toLowerCase().includes('checksum') || 
+        s.description.toLowerCase().includes('expired') || 
+        s.description.toLowerCase().includes('tamper') ||
+        s.description.toLowerCase().includes('spliced') ||
+        s.description.toLowerCase().includes('statutory minimum age') ||
+        s.description.toLowerCase().includes('licensing age') ||
+        s.description.toLowerCase().includes('modification suffix')
+      );
+
+      if (isHighTamper) {
+        fraudRisk += 55;
+      } else {
+        fraudRisk += 30;
+      }
+
       if (isPassport) {
         riskFactors.push({
           factor: 'MRZ Inconsistency',
@@ -207,7 +226,7 @@ export function evaluateEvidence(evidence: EvidenceMap, documentType?: string): 
       } else if (isAadhaar) {
         riskFactors.push({
           factor: 'UIDAI Format / Pattern Anomaly',
-          impact: '+50 fraud risk',
+          impact: isHighTamper ? '+50 fraud risk' : '+30 fraud risk',
           category: 'risk',
           detail: 'Discrepancy detected in UIDAI 12-digit structure or demographic layout.'
         });
@@ -221,7 +240,7 @@ export function evaluateEvidence(evidence: EvidenceMap, documentType?: string): 
       } else if (isDl) {
         riskFactors.push({
           factor: 'Driving Licence Validity / Format Anomaly',
-          impact: '+50 fraud risk',
+          impact: isHighTamper ? '+50 fraud risk' : '+30 fraud risk',
           category: 'risk',
           detail: 'Discrepancy detected in licence validity period or RTO structure.'
         });
@@ -235,7 +254,7 @@ export function evaluateEvidence(evidence: EvidenceMap, documentType?: string): 
       } else if (isVoter) {
         riskFactors.push({
           factor: 'EPIC Identifier Format Anomaly',
-          impact: '+50 fraud risk',
+          impact: isHighTamper ? '+50 fraud risk' : '+30 fraud risk',
           category: 'risk',
           detail: 'Discrepancy detected in Election Commission alphanumeric EPIC format.'
         });
@@ -249,7 +268,7 @@ export function evaluateEvidence(evidence: EvidenceMap, documentType?: string): 
       } else {
         riskFactors.push({
           factor: 'Document Field Contradiction',
-          impact: '+50 fraud risk',
+          impact: isHighTamper ? '+50 fraud risk' : '+30 fraud risk',
           category: 'risk',
           detail: 'Discrepancies identified across extracted visual zone fields.'
         });
@@ -264,11 +283,13 @@ export function evaluateEvidence(evidence: EvidenceMap, documentType?: string): 
     } else {
       // Poor image quality (blur / glare): +0 fraud risk, decrease evidence confidence
       fraudRisk += 0;
+      // Poor image quality (blur / glare): moderate risk contribution, decrease evidence confidence
+      fraudRisk += 25;
       riskFactors.push({
         factor: 'Document Quality (Blur / Glare)',
-        impact: '+0 fraud risk',
+        impact: '+25 risk (quality degradation)',
         category: 'risk',
-        detail: 'Specular glare reflection or motion blur detected. Image degradation lowers confidence without declaring fraud.'
+        detail: 'Specular glare reflection or motion blur detected. Image degradation lowers confidence and requires step-up verification.'
       });
       confidenceFactors.push({
         factor: 'Document Quality Degraded',
@@ -499,6 +520,7 @@ export function evaluateEvidence(evidence: EvidenceMap, documentType?: string): 
   // IF Evidence Confidence < 50 → INCONCLUSIVE
   // ELSE IF Fraud Risk > 50 → OFFICER REVIEW
   // ELSE IF Fraud Risk < 25 AND Evidence Confidence < 85 → TARGETED VERIFICATION
+  // ELSE IF Fraud Risk >= 25 OR Evidence Confidence < 85 → TARGETED VERIFICATION
   // ELSE → NORMAL PROCESSING
   let recommendation: VerificationStatus;
   let recommendationReason: string;
@@ -511,12 +533,14 @@ export function evaluateEvidence(evidence: EvidenceMap, documentType?: string): 
     findings.push('Evidence confidence is below reliable decision threshold (< 50/100).');
   } else if (fraudRisk > 50) {
     recommendation = 'Officer Review';
-    recommendationReason = 'Fraud risk elevated above operational threshold (> 50/100) due to one or more high-consequence risk indicators. Requires authorized officer investigation.';
+    recommendationReason = `Fraud risk elevated above operational threshold (${fraudRisk}/100) due to one or more high-consequence risk indicators. Requires authorized officer investigation.`;
     recommendedAction = 'Perform comprehensive dossier audit and inspect flagged biometric or document anomalies.';
     findings.push('Elevated risk indicators require authorized officer evaluation before determination.');
-  } else if (fraudRisk < 25 && evidenceConfidence < 85) {
+  } else if (fraudRisk >= 25 || evidenceConfidence < 85) {
     recommendation = 'Targeted Verification';
-    recommendationReason = 'Fraud risk is low (18/100), but evidence completeness is below standard baseline (< 85/100) due to an unavailable database source. Targeted verification is recommended rather than treating the subject as fraudulent.';
+    recommendationReason = fraudRisk >= 25
+      ? `Moderate risk indicators (${fraudRisk}/100) or demographic format anomalies detected. Targeted step-up verification is recommended.`
+      : `Fraud risk is low (${fraudRisk}/100), but evidence completeness is below standard baseline (< 85/100). Targeted verification is recommended rather than treating the subject as fraudulent.`;
     recommendedAction = 'Complete the unavailable database check or perform an authorized secondary verification.';
     findings.push('Targeted verification is recommended rather than treating the subject as fraudulent.');
   } else {

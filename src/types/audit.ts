@@ -16,7 +16,7 @@ export interface AuditEvent {
   timestamp: string;
   prevHash: string;
   currentHash: string;
-  integrity: 'VERIFIED' | 'FLAGGED';
+  integrity: 'VERIFIED' | 'FLAGGED' | 'IN PROGRESS';
   payloadSummary: string;
 }
 

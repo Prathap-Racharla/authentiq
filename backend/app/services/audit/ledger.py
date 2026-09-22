@@ -58,7 +58,7 @@ class TamperEvidentAuditLedger:
                 event_type="GENESIS_INITIALIZED",
                 previous_hash=self.GENESIS_HASH,
                 current_hash=h0,
-                integrity_state="VALID",
+                integrity_state="VERIFIED",
                 payload_summary="AuthentiQ Prototype Audit Ledger initialized with SHA-256 event chaining.",
             )
         )
@@ -123,7 +123,7 @@ class TamperEvidentAuditLedger:
             event_type=event_type,
             previous_hash=prev_hash,
             current_hash=curr_hash,
-            integrity_state="VALID",
+            integrity_state="VERIFIED",
             payload_summary=payload_summary,
         )
         self._chain.append(event)
@@ -136,8 +136,25 @@ class TamperEvidentAuditLedger:
         type_filter: Optional[str] = None,
         verification_id: Optional[str] = None,
     ) -> List[AuditEventSchema]:
-        """Retrieve recent audit events matching optional filters."""
-        results = list(reversed(self._chain))
+        """Retrieve recent audit events matching optional filters, contextualizing verification integrity state."""
+        # Find which verification IDs have received an officer decision
+        decided_verifications = {
+            e.verification_id
+            for e in self._chain
+            if "OFFICER" in e.event_type.upper() or e.event_type == "GENESIS_INITIALIZED"
+        }
+
+        results: List[AuditEventSchema] = []
+        for e in reversed(self._chain):
+            if e.integrity_state == "COMPROMISED":
+                state = "COMPROMISED"
+            elif e.verification_id in decided_verifications or e.verification_id == "SYSTEM":
+                state = "VERIFIED"
+            else:
+                state = "IN PROGRESS"
+
+            results.append(e.model_copy(update={"integrity_state": state}))
+
         if actor_filter:
             results = [e for e in results if actor_filter.lower() in e.actor.lower()]
         if type_filter:

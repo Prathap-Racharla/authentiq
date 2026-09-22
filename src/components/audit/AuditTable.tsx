@@ -8,7 +8,9 @@ import {
   ChevronRight, 
   ChevronDown, 
   Lock,
-  Layers
+  Layers,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { truncateHash } from '../../utils/hash';
 import { Link } from 'react-router-dom';
@@ -141,8 +143,16 @@ export const AuditTable: React.FC<AuditTableProps> = ({ events }) => {
                       </div>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded border text-[11px] font-mono font-semibold bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded border text-[11px] font-mono font-semibold ${
+                        evt.integrity === 'VERIFIED'
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                          : evt.integrity === 'IN PROGRESS'
+                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                          : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                      }`}>
+                        {evt.integrity === 'VERIFIED' && <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />}
+                        {evt.integrity === 'IN PROGRESS' && <Clock className="w-3.5 h-3.5 text-amber-400" />}
+                        {evt.integrity === 'FLAGGED' && <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />}
                         {evt.integrity}
                       </span>
                     </td>

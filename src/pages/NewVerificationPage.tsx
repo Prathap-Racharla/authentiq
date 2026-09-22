@@ -31,6 +31,7 @@ import { EvidenceMap, VerificationMode, VerificationStatus } from '../types';
 import { DecisionSummaryCard } from '../components/verification/DecisionSummaryCard';
 import { KeyFindingsList } from '../components/verification/KeyFindingsList';
 import { OfficerDecisionPanel } from '../components/verification/OfficerDecisionPanel';
+import { formatDocumentType } from '../utils/formatters';
 
 interface PipelineStageItem {
   id: string;
@@ -462,24 +463,22 @@ export const NewVerificationPage: React.FC = () => {
       setActiveAnalysis(response);
 
       // Determine Document Type and document-specific validation text
-      const rawUpper = (response.ocr_raw_text || '').toUpperCase();
-      let docType = 'Identity Document';
+      const datasetDocId = !(input instanceof File) ? input.datasetDocId : undefined;
+      const docType = formatDocumentType(response.document_type, response.ocr_raw_text, fname, datasetDocId);
       let specStageLabel = 'Credential Format & Security Structure Validation';
 
-      if (response.document_type === 'passport' || rawUpper.includes('PASSPORT') || response.mrz.detected) {
-        docType = 'International Passport';
+      if (docType === 'International Passport') {
         specStageLabel = `MRZ Inspection: ${
           response.mrz.all_check_digits_valid ? 'Valid ICAO 9303 TD3 Checksums' : 'MRZ Checksum Anomaly Flagged'
         }`;
-      } else if (response.document_type === 'aadhaar' || rawUpper.includes('AADHAAR') || rawUpper.includes('UNIQUE IDENTIFICATION')) {
-        docType = 'Aadhaar Card';
+      } else if (docType === 'Aadhaar Card') {
         specStageLabel = 'UIDAI 12-Digit Structure & Demographic Validation';
-      } else if (response.document_type === 'driving_licence' || rawUpper.includes('DRIVER') || rawUpper.includes('DRIVING') || rawUpper.includes('DL ')) {
-        docType = 'Driving Licence';
+      } else if (docType === 'Driving Licence') {
         specStageLabel = 'Licence Validity Window & RTO Structure Checks';
-      } else if (response.document_type === 'voter_id' || rawUpper.includes('VOTER') || rawUpper.includes('ELECTION') || rawUpper.includes('EPIC')) {
-        docType = 'Voter ID';
+      } else if (docType === 'Voter ID') {
         specStageLabel = 'EPIC Alphanumeric Format & Electoral Record Validation';
+      } else if (docType === 'PAN Card') {
+        specStageLabel = 'Income Tax Department PAN Format Validation';
       }
 
       setDetectedType(docType);
@@ -564,7 +563,7 @@ export const NewVerificationPage: React.FC = () => {
       }));
 
       // Record audit event in backend SHA-256 ledger
-      const mrzDetail = (response.document_type === 'passport' || response.mrz.detected)
+      const mrzDetail = (docType === 'International Passport' || response.mrz.detected)
         ? `MRZ: ${response.mrz.all_check_digits_valid ? 'Valid' : 'Anomaly'}`
         : `Format: ${docType}`;
       recordAuditEvent(

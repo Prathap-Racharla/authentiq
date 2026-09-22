@@ -16,6 +16,7 @@ import {
   Info
 } from 'lucide-react';
 import { DocumentAnalysisResponse } from '../../services/documentApi';
+import { formatDocumentType } from '../../utils/formatters';
 
 interface DocumentAnalysisModalProps {
   isOpen: boolean;
@@ -37,11 +38,11 @@ export const DocumentAnalysisModal: React.FC<DocumentAnalysisModalProps> = ({
   const docType = (data.document_type || '').toLowerCase();
   const rawTextUpper = (data.ocr_raw_text || '').toUpperCase();
   const fnameLower = (data.filename || '').toLowerCase();
-
-  const isPassport = docType === 'passport' || fnameLower.includes('pass_') || fnameLower.includes('passport') || (mrz.applicable && mrz.detected);
-  const isAadhaar = docType === 'aadhaar' || fnameLower.includes('aad_') || fnameLower.includes('aadhaar') || rawTextUpper.includes('AADHAAR') || rawTextUpper.includes('UIDAI');
-  const isDrivingLicence = docType === 'driving_licence' || fnameLower.includes('dl_') || fnameLower.includes('driving') || rawTextUpper.includes('DRIVING') || rawTextUpper.includes('LICENCE');
-  const isVoterId = docType === 'voter_id' || fnameLower.includes('vot_') || fnameLower.includes('voter') || rawTextUpper.includes('ELECTION') || rawTextUpper.includes('EPIC');
+  const formattedType = formatDocumentType(data.document_type, data.ocr_raw_text, data.filename, data.dataset_id || undefined);
+  const isPassport = formattedType === 'International Passport';
+  const isAadhaar = formattedType === 'Aadhaar Card';
+  const isDrivingLicence = formattedType === 'Driving Licence';
+  const isVoterId = formattedType === 'Voter ID';
 
   const docNumField = structured_fields.find(f => f.field === 'document_number');
   const nameField = structured_fields.find(f => f.field === 'full_name');
@@ -97,6 +98,7 @@ export const DocumentAnalysisModal: React.FC<DocumentAnalysisModalProps> = ({
                 <span>File: <strong className="text-slate-300">{data.filename}</strong></span>
                 <span>•</span>
                 <span>Type: <strong className="text-slate-300">{data.mime_type}</strong></span>
+                <span>Document: <strong className="text-cyan-400 font-semibold">{formattedType}</strong></span>
                 <span>•</span>
                 <span>Latency: <strong className="text-slate-300">{data.processing_time_ms} ms</strong></span>
               </p>

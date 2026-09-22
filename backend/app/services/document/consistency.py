@@ -33,7 +33,8 @@ def normalize_date(date_str: str) -> Optional[str]:
 
 def check_consistency(
     structured_fields: List[StructuredField],
-    mrz: MRZResult
+    mrz: MRZResult,
+    raw_text: str = ""
 ) -> List[CrossFieldConsistencyItem]:
     """Cross-examine OCR visual text fields with MRZ machine-readable fields."""
     items: List[CrossFieldConsistencyItem] = []
@@ -43,16 +44,28 @@ def check_consistency(
         doc_num = field_map.get("document_number")
         if doc_num:
             clean_num = re.sub(r'[^A-Za-z0-9]', '', doc_num)
-            if clean_num.isdigit() and len(clean_num) == 12:
-                items.append(CrossFieldConsistencyItem(
-                    comparison="UIDAI 12-Digit Format",
-                    ocr_value=doc_num,
-                    mrz_value="12-Digit UIDAI Spec",
-                    status="MATCH",
-                    explanation="Aadhaar UID matches standard 12-digit numeric structure."
-                ))
-            elif len(clean_num) >= 10 and clean_num[:2].isalpha() and any(c.isdigit() for c in clean_num):
-                if len(clean_num) == 10 and clean_num[:3].isalpha() and clean_num[3:].isdigit():
+
+            # 1. Aadhaar (Numeric UIDAI standard)
+            if clean_num.isdigit():
+                if len(clean_num) == 12:
+                    items.append(CrossFieldConsistencyItem(
+                        comparison="UIDAI 12-Digit Format",
+                        ocr_value=doc_num,
+                        mrz_value="12-Digit UIDAI Spec",
+                        status="MATCH",
+                        explanation="Aadhaar UID matches standard 12-digit numeric structure."
+                    ))
+                else:
+                    items.append(CrossFieldConsistencyItem(
+                        comparison="UIDAI 12-Digit Format",
+                        ocr_value=doc_num,
+                        mrz_value="12-Digit UIDAI Spec",
+                        status="MISMATCH",
+                        explanation=f"Aadhaar UID format anomaly: extracted number has {len(clean_num)} digits instead of standard 12 digits."
+                    ))
+            # 2. Voter ID (EPIC: 3 letters + 7 digits)
+            elif clean_num[:3].isalpha() and (len(clean_num) <= 12 and any(c.isdigit() for c in clean_num[3:])):
+                if len(clean_num) == 10 and clean_num[3:].isdigit():
                     items.append(CrossFieldConsistencyItem(
                         comparison="EPIC Identifier Format",
                         ocr_value=doc_num,
@@ -62,11 +75,30 @@ def check_consistency(
                     ))
                 else:
                     items.append(CrossFieldConsistencyItem(
+                        comparison="EPIC Identifier Format",
+                        ocr_value=doc_num,
+                        mrz_value="3-Alpha + 7-Digit Spec",
+                        status="MISMATCH",
+                        explanation=f"EPIC format anomaly: voter ID '{doc_num}' has non-standard length ({len(clean_num)}) or extra trailing characters."
+                    ))
+            # 3. Driving Licence (MoRTH Sarathi: 2 letters + 11-15 digits)
+            elif clean_num[:2].isalpha() and any(c.isdigit() for c in clean_num[2:]):
+                is_standard_dl = bool(re.match(r'^[A-Z]{2}[0-9]{11,15}$', clean_num))
+                if is_standard_dl:
+                    items.append(CrossFieldConsistencyItem(
                         comparison="RTO Licence Format",
                         ocr_value=doc_num,
                         mrz_value="MoRTH Sarathi Spec",
                         status="MATCH",
                         explanation="Driving Licence matches state RTO alphanumeric credential structure."
+                    ))
+                else:
+                    items.append(CrossFieldConsistencyItem(
+                        comparison="RTO Licence Format",
+                        ocr_value=doc_num,
+                        mrz_value="MoRTH Sarathi Spec",
+                        status="MISMATCH",
+                        explanation=f"Driving licence format anomaly: number '{doc_num}' contains irregular modification suffix or non-standard format."
                     ))
             else:
                 items.append(CrossFieldConsistencyItem(
@@ -95,6 +127,110 @@ def check_consistency(
                 status="MATCH" if dob_valid else "MISMATCH",
                 explanation="Date of birth is chronologically consistent." if dob_valid else "Date of birth contains invalid year bounds."
             ))
+
+            # Check Age vs DOB contradiction if both are present in raw text
+            if raw_text:
+                birth_year = int(norm_dob.split("-")[0]) if norm_dob else 0
+                age_m = re.search(r'(\d{1,3})\s*Years', raw_text, re.IGNORECASE)
+                if age_m and birth_year > 0:
+                    try:
+                        current_year = datetime.now().year
+                        calc_age = current_year - birth_year
+                        stated_age = int(age_m.group(1))
+                        if abs(calc_age - stated_age) > 5:
+                            items.append(CrossFieldConsistencyItem(
+                                comparison="Demographic Age <-> DOB Correlation",
+                                ocr_value=f"{stated_age} Years",
+                                mrz_value=f"Computed: ~{calc_age} Years (DOB: {dob})",
+                                status="MISMATCH",
+                                explanation=f"Contradiction between stated age ({stated_age} Years) and extracted birth year ({birth_year})."
+                            ))
+                        else:
+                            items.append(CrossFieldConsistencyItem(
+                                comparison="Demographic Age <-> DOB Correlation",
+                                ocr_value=f"{stated_age} Years",
+                                mrz_value=f"Computed: ~{calc_age} Years (DOB: {dob})",
+                                status="MATCH",
+                                explanation="Stated age correlates with extracted birth year."
+                            ))
+                    except Exception:
+                        pass
+
+                # Check DOB vs Year of Birth (e.g., Aadhaar with mismatched DOB and Year of Birth)
+                if raw_text and birth_year > 0:
+                    yob_val = None
+                    yob_m = re.search(r'(?:Year\s*of\s*Birth|YOB)[^\d]{0,40}(\d{4})', raw_text, re.IGNORECASE)
+                    if yob_m:
+                        yob_val = int(yob_m.group(1))
+
+                    if not yob_val and any(k in raw_text.upper() for k in ['YEAR OF BIRTH', 'YEAROFBIRTH', 'YOB']):
+                        years_in_text = [int(y) for y in re.findall(r'\b(19\d{2}|20[0-2]\d)\b', raw_text)]
+                        contradicting_years = [y for y in years_in_text if y != birth_year and y not in [datetime.now().year, 2026]]
+                        if contradicting_years:
+                            yob_val = contradicting_years[0]
+
+                    if yob_val and yob_val != birth_year:
+                        items.append(CrossFieldConsistencyItem(
+                            comparison="Demographic DOB -> Year of Birth Correlation",
+                            ocr_value=f"DOB: {dob} (Year {birth_year})",
+                            mrz_value=f"Stated Year of Birth: {yob_val}",
+                            status="MISMATCH",
+                            explanation=f"Demographic contradiction: Extracted Date of Birth ({dob}, year {birth_year}) does not match stated Year of Birth ({yob_val})."
+                        ))
+                    elif yob_val and yob_val == birth_year:
+                        items.append(CrossFieldConsistencyItem(
+                            comparison="Demographic DOB -> Year of Birth Correlation",
+                            ocr_value=f"DOB: {dob}",
+                            mrz_value=f"Year of Birth: {yob_val}",
+                            status="MATCH",
+                            explanation="Date of birth year matches stated Year of Birth."
+                        ))
+
+                # Check Driving Licence statutory minimum age eligibility (18 years)
+                is_dl_doc = any(k in raw_text.upper() for k in ['DRIVING LICENCE', 'DRIVING LICENSE', 'MOTOR VEHICLES', 'SARATHI', 'MCWG', 'LMV']) or (doc_num and 'DL-' in doc_num.upper())
+                if is_dl_doc and birth_year > 0:
+                    issue_date = field_map.get("issue_date")
+                    issue_year = None
+                    if issue_date:
+                        norm_iss = normalize_date(issue_date)
+                        if norm_iss:
+                            try:
+                                issue_year = int(norm_iss.split("-")[0])
+                            except Exception:
+                                pass
+                    if not issue_year and doc_num:
+                        m_y = re.search(r'DL-[A-Z0-9]{2}(20[0-2][0-9])', doc_num)
+                        if m_y:
+                            issue_year = int(m_y.group(1))
+                    if not issue_year:
+                        m_iss_raw = re.search(r'(?:Date\s*of\s*Issue|DateofIssue|DOI|Issued\s*On)\s*[:.\-]?\s*([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{4})', raw_text, re.IGNORECASE)
+                        if m_iss_raw:
+                            norm_iss = normalize_date(m_iss_raw.group(1).strip())
+                            if norm_iss:
+                                try:
+                                    issue_year = int(norm_iss.split("-")[0])
+                                except Exception:
+                                    pass
+
+                    current_year = datetime.now().year
+                    ref_year = issue_year if issue_year else current_year
+                    age_at_ref = ref_year - birth_year
+                    if age_at_ref < 18:
+                        items.append(CrossFieldConsistencyItem(
+                            comparison="Licensing Age Eligibility (Min 18 Years)",
+                            ocr_value=f"DOB: {dob}, Issued/Ref: {issue_year or ref_year} (Age {age_at_ref})",
+                            mrz_value="Minimum Statutory Age: 18 Years",
+                            status="MISMATCH",
+                            explanation=f"Demographic anomaly: Applicant was {age_at_ref} years old at licence issuance (statutory minimum age for motor vehicle licensing is 18 years)."
+                        ))
+                    else:
+                        items.append(CrossFieldConsistencyItem(
+                            comparison="Licensing Age Eligibility (Min 18 Years)",
+                            ocr_value=f"DOB: {dob} (Age {age_at_ref})",
+                            mrz_value="Minimum Statutory Age: 18 Years",
+                            status="MATCH",
+                            explanation="Applicant satisfies statutory minimum age requirement for driver licensing."
+                        ))
 
         exp_date = field_map.get("expiry_date")
         if exp_date:
@@ -126,7 +262,7 @@ def check_consistency(
 
     if not mrz.detected:
         items.append(CrossFieldConsistencyItem(
-            comparison="OCR ↔ MRZ Cross-Check",
+            comparison="OCR <-> MRZ Cross-Check",
             ocr_value="Available",
             mrz_value="No MRZ Detected",
             status="UNAVAILABLE",
@@ -168,7 +304,7 @@ def check_consistency(
 
         if norm_ocr == norm_mrz or len(common) >= min(len(ocr_tokens), len(mrz_tokens)):
             items.append(CrossFieldConsistencyItem(
-                comparison="OCR Name ↔ MRZ Name",
+                comparison="OCR Name <-> MRZ Name",
                 ocr_value=ocr_name,
                 mrz_value=mrz_name,
                 status="MATCH",
@@ -176,7 +312,7 @@ def check_consistency(
             ))
         else:
             items.append(CrossFieldConsistencyItem(
-                comparison="OCR Name ↔ MRZ Name",
+                comparison="OCR Name <-> MRZ Name",
                 ocr_value=ocr_name,
                 mrz_value=mrz_name,
                 status="MISMATCH",
@@ -184,7 +320,7 @@ def check_consistency(
             ))
     else:
         items.append(CrossFieldConsistencyItem(
-            comparison="OCR Name ↔ MRZ Name",
+            comparison="OCR Name <-> MRZ Name",
             ocr_value=ocr_name,
             mrz_value=mrz_name,
             status="UNAVAILABLE",
@@ -205,7 +341,7 @@ def check_consistency(
 
         if norm_ocr_dob == norm_mrz_dob or digits_ocr.endswith(digits_mrz) or digits_mrz.endswith(digits_ocr):
             items.append(CrossFieldConsistencyItem(
-                comparison="OCR DOB ↔ MRZ DOB",
+                comparison="OCR DOB <-> MRZ DOB",
                 ocr_value=ocr_dob,
                 mrz_value=mrz_dob,
                 status="MATCH",
@@ -213,7 +349,7 @@ def check_consistency(
             ))
         else:
             items.append(CrossFieldConsistencyItem(
-                comparison="OCR DOB ↔ MRZ DOB",
+                comparison="OCR DOB <-> MRZ DOB",
                 ocr_value=ocr_dob,
                 mrz_value=mrz_dob,
                 status="MISMATCH",
@@ -221,7 +357,7 @@ def check_consistency(
             ))
     else:
         items.append(CrossFieldConsistencyItem(
-            comparison="OCR DOB ↔ MRZ DOB",
+            comparison="OCR DOB <-> MRZ DOB",
             ocr_value=ocr_dob,
             mrz_value=mrz_dob,
             status="UNAVAILABLE",
@@ -239,7 +375,7 @@ def check_consistency(
         # Allow subset matching if country code prefix is present in one
         if norm_ocr_num == norm_mrz_num or norm_ocr_num in norm_mrz_num or norm_mrz_num in norm_ocr_num:
             items.append(CrossFieldConsistencyItem(
-                comparison="OCR Document Number ↔ MRZ Document Number",
+                comparison="OCR Document Number <-> MRZ Document Number",
                 ocr_value=ocr_num,
                 mrz_value=mrz_num,
                 status="MATCH",
@@ -247,7 +383,7 @@ def check_consistency(
             ))
         else:
             items.append(CrossFieldConsistencyItem(
-                comparison="OCR Document Number ↔ MRZ Document Number",
+                comparison="OCR Document Number <-> MRZ Document Number",
                 ocr_value=ocr_num,
                 mrz_value=mrz_num,
                 status="MISMATCH",
@@ -255,7 +391,7 @@ def check_consistency(
             ))
     else:
         items.append(CrossFieldConsistencyItem(
-            comparison="OCR Document Number ↔ MRZ Document Number",
+            comparison="OCR Document Number <-> MRZ Document Number",
             ocr_value=ocr_num,
             mrz_value=mrz_num,
             status="UNAVAILABLE",

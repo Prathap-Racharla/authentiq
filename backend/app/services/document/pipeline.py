@@ -128,15 +128,34 @@ def extract_structured_fields(raw_text: str, mrz: MRZResult) -> List[StructuredF
     dob_conf = 88.0
     for line in lines:
         m = re.search(r'(?:Date of Birth|DOB|Birth Date|Birth|Year of Birth|Date de naissance)\s*[:.\-]?\s*' + date_pat, line, re.IGNORECASE)
+        m = re.search(r'(?:Date\s*of\s*Birth|DOB|D0B|Birth\s*Date|Birth|Year\s*of\s*Birth|Date\s*de\s*naissance)\s*[:.\-]?\s*' + date_pat, line, re.IGNORECASE)
         if m:
             dob_val = m.group(1).strip()
             dob_conf = 96.0
             break
         m_yob = re.search(r'(?:Year of Birth|YOB)\s*[:.\-]?\s*([0-9]{4})', line, re.IGNORECASE)
+        m_yob = re.search(r'(?:Year\s*of\s*Birth|YOB)\s*[:.\-]?\s*([0-9]{4})', line, re.IGNORECASE)
         if m_yob:
             dob_val = m_yob.group(1).strip()
             dob_conf = 90.0
             break
+
+    # Multi-line or fuzzy DOB search in raw text
+    if not dob_val:
+        m_fuzzy = re.search(r'(?:Date\s*of\s*Birth|DOB|D0B|Birth\s*Date|Birth)[^\d\r\n]{0,30}[:.\-]?\s*([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{4}|[0-9]{4}[/-][0-9]{1,2}[/-][0-9]{1,2})', raw_text, re.IGNORECASE)
+        if m_fuzzy:
+            dob_val = m_fuzzy.group(1).strip()
+            dob_conf = 92.0
+        else:
+            # Fallback: scan for any valid date not associated with expiry or issue
+            all_dates = re.findall(r'\b([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{4})\b', raw_text)
+            exp_m = re.search(r'(?:Valid\s*Until|Expiry|EXP)[^\d]{0,20}' + date_pat, raw_text, re.IGNORECASE)
+            exp_str = exp_m.group(1) if exp_m else ""
+            for d in all_dates:
+                if d != exp_str:
+                    dob_val = d
+                    dob_conf = 86.0
+                    break
 
     if not dob_val and mrz.detected and "date_of_birth" in mrz.parsed_fields:
         dob_val = mrz.parsed_fields["date_of_birth"]
@@ -150,6 +169,20 @@ def extract_structured_fields(raw_text: str, mrz: MRZResult) -> List[StructuredF
             confidence=dob_conf,
             source="Visual Inspection Zone (VIZ)",
             source_region={"x": 120, "y": 140, "w": 180, "h": 26}
+        ))
+
+    # 2b. Date of Issue (for Driving Licence / Passport)
+    issue_val = None
+    m_issue = re.search(r'(?:Date\s*of\s*Issue|DateofIssue|DOI|Issued\s*On|Issue\s*Date)\s*[:.\-]?\s*([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{4})', raw_text, re.IGNORECASE)
+    if m_issue:
+        issue_val = m_issue.group(1).strip()
+        fields.append(StructuredField(
+            field="issue_date",
+            label="Date of Issue",
+            value=issue_val,
+            confidence=92.0,
+            source="Visual Inspection Zone (VIZ)",
+            source_region={"x": 120, "y": 160, "w": 180, "h": 26}
         ))
 
     # 3. Document Number
@@ -166,7 +199,14 @@ def extract_structured_fields(raw_text: str, mrz: MRZResult) -> List[StructuredF
     if not doc_num_val and mrz.detected and "document_number" in mrz.parsed_fields:
         doc_num_val = mrz.parsed_fields["document_number"]
         doc_num_conf = 93.0
+    # Specific credential patterns first
+    # 3a. Driving Licence pattern: DL-0420180091247 or DL-0920180098765
+    dl_m = re.search(r'\b([A-Z]{2}[-][0-9]{11,15}(?:-[A-Z0-9]+)?)\b', raw_text)
+    if dl_m:
+        doc_num_val = dl_m.group(1).strip()
+        doc_num_conf = 95.0
 
+    # 3b. Voter ID / EPIC pattern: ABC1234567 or ABC1234567X
     if not doc_num_val:
         # Aadhaar 12-digit pattern: 1234 5678 9012
         aadhaar_m = re.search(r'\b([0-9]{4}\s[0-9]{4}\s[0-9]{4})\b', raw_text)
@@ -188,12 +228,42 @@ def extract_structured_fields(raw_text: str, mrz: MRZResult) -> List[StructuredF
             doc_num_val = epic_m.group(1).strip()
             doc_num_conf = 94.0
 
+    # 3c. Aadhaar pattern: 1234 5678 9012 or across newlines or 12-13 contiguous digits
     if not doc_num_val:
         # PAN pattern: ABCDE1234F
+        aadhaar_m = re.search(r'\b([0-9]{4}[\s\r\n]+[0-9]{4}[\s\r\n]+[0-9]{4,5})\b', raw_text)
+        if aadhaar_m:
+            doc_num_val = re.sub(r'[\r\n]+', ' ', aadhaar_m.group(1).strip())
+            doc_num_conf = 94.0
+        else:
+            aadhaar_contig = re.search(r'\b([0-9]{12,13})\b', raw_text)
+            if aadhaar_contig and not any(k in raw_text.upper() for k in ['DL-', 'DRIVING', 'MCWG']):
+                doc_num_val = aadhaar_contig.group(1).strip()
+                doc_num_conf = 94.0
+
+    # 3d. PAN pattern: ABCDE1234F
+    if not doc_num_val:
         pan_m = re.search(r'\b([A-Z]{5}[0-9]{4}[A-Z])\b', raw_text)
         if pan_m:
             doc_num_val = pan_m.group(1).strip()
             doc_num_conf = 94.0
+
+    # 3e. MRZ parsed document number
+    if not doc_num_val and mrz.detected and "document_number" in mrz.parsed_fields:
+        doc_num_val = mrz.parsed_fields["document_number"]
+        doc_num_conf = 93.0
+
+    # 3f. Generic document number label match
+    if not doc_num_val:
+        doc_m = re.search(r'(?:Passport\s*N[oa]|Document\s*N[oa]|ID\s*N[oa]|Card\s*N[oa]|Doc\s*N[oa]|Doc\s*#|Licen[cs]e\s*N[oa]|DL\s*N[oa]|DL|EPIC\s*N[oa]|EPIC|PAN|Aadhaar\s*N[oa]|Card\s*Number|ID\s*Number|Document\s*Number|No\.|Number)\s*[:.\-#]?\s*([A-Z0-9\s-]{5,28})', raw_text, re.IGNORECASE)
+        if doc_m:
+            cand = doc_m.group(1).strip()
+            cand = re.split(r'[\r\n]+|\s{2,}|(?=EXP|DOB|SEX|NAME|SURNAME|VALID)', cand, flags=re.IGNORECASE)[0].strip()
+            # Ignore false matches from disclaimer watermarks
+            if not any(k in cand.upper() for k in ['REAL ID', 'NOT A REAL', 'FICTIONAL', 'DOCUMENT', 'AUTHENTIQ', 'STRICTLY']):
+                if len(cand) >= 5:
+                    doc_num_val = cand
+                    doc_num_conf = 90.0
 
     if doc_num_val:
         fields.append(StructuredField(
@@ -336,14 +406,58 @@ def detect_document_type(raw_text: str, filename: str, mrz_detected: bool) -> st
     text_upper = raw_text.upper()
     fname_lower = filename.lower()
 
-    if "AADHAAR" in text_upper or "UIDAI" in text_upper or "UNIQUE IDENTIFICATION" in text_upper or "ENROLMENT" in text_upper or "aad_" in fname_lower or "aadhaar" in fname_lower or re.search(r'\b[0-9]{4}\s[0-9]{4}\s[0-9]{4}\b', text_upper):
-        return "AADHAAR_STYLE"
-    if "DRIVING LICENCE" in text_upper or "DRIVING LICENSE" in text_upper or "UNION OF INDIA DRIVING" in text_upper or "dl_" in fname_lower or "dl-" in text_upper or "driving" in fname_lower or "MCWG" in text_upper or "LMV" in text_upper:
-        return "DRIVING_LICENCE"
-    if "ELECTION COMMISSION" in text_upper or "ELECTOR" in text_upper or "VOTER" in text_upper or "EPIC" in text_upper or "vot_" in fname_lower or "voter" in fname_lower:
-        return "VOTER_ID"
-    if mrz_detected or "PASSPORT" in text_upper or "P<" in text_upper or "pass_" in fname_lower or "passport" in fname_lower:
+    # 1. Passport (MRZ or Passport keywords)
+    if (
+        mrz_detected
+        or "PASSPORT" in text_upper
+        or "P<" in text_upper
+        or "pass_" in fname_lower
+        or "pass-" in fname_lower
+        or "passport" in fname_lower
+    ):
         return "PASSPORT"
+
+    # 2. Driving Licence (State RTO, MoRTH, Driving Licence keywords)
+    if (
+        "DRIVING LICENCE" in text_upper
+        or "DRIVING LICENSE" in text_upper
+        or "UNION OF INDIA DRIVING" in text_upper
+        or "dl_" in fname_lower
+        or "dl-" in fname_lower
+        or "dl-" in text_upper
+        or "driving" in fname_lower
+        or "MCWG" in text_upper
+        or "LMV" in text_upper
+    ):
+        return "DRIVING_LICENCE"
+
+    # 3. Voter ID (Election Commission, EPIC keywords)
+    if (
+        "ELECTION COMMISSION" in text_upper
+        or "ELECTOR" in text_upper
+        or "VOTER" in text_upper
+        or "EPIC" in text_upper
+        or "vot_" in fname_lower
+        or "vot-" in fname_lower
+        or "voter" in fname_lower
+    ):
+        return "VOTER_ID"
+
+    # 4. Aadhaar (UIDAI, Unique Identification, 12-digit UID)
+    if (
+        "AADHAAR" in text_upper
+        or "UIDAI" in text_upper
+        or "UNIQUE IDENTIFICATION" in text_upper
+        or "ENROLMENT" in text_upper
+        or "MERAAADHAAR" in text_upper
+        or "aad_" in fname_lower
+        or "aad-" in fname_lower
+        or "aadhaar" in fname_lower
+        or re.search(r'\b[0-9]{4}\s[0-9]{4}\s[0-9]{4}\b', text_upper)
+        or re.search(r'\b[0-9]{12,13}\b', text_upper)
+    ):
+        return "AADHAAR_STYLE"
+
     return "UNKNOWN"
 
 
@@ -358,6 +472,7 @@ def build_evidence_object(
     signals: List[EvidenceSignal] = []
 
     has_high_anomalies = any(a.severity == "high" for a in anomalies)
+    has_medium_anomalies = any(a.severity == "medium" for a in anomalies)
     is_degraded = quality.quality_score < 75.0
 
     if is_degraded:
@@ -371,17 +486,22 @@ def build_evidence_object(
             description=f"Image quality score: {int(quality.quality_score)}/100 (Uncertain quality)"
         ))
         signals.append(EvidenceSignal(
+            label="Quality Anomaly",
+            impact="warning",
+            description=f"Significant optical degradation ({quality.blur_level.lower()} blur). Quality anomaly lowers confidence and requires step-up re-capture."
+        ))
+        signals.append(EvidenceSignal(
             label="Fraud Assessment",
             impact="neutral",
             description="Quality degradation does NOT constitute evidence of fraud (+0 fraud risk)."
         ))
-    elif has_high_anomalies:
+    elif has_high_anomalies or has_medium_anomalies:
         status = "Uncertain"
         confidence = 86
         availability = "Available"
-        summary = "Document fields extracted with high optical clarity, but cross-field contradictions, validity expiry, or tampering anomalies were detected."
+        summary = "Document fields extracted with high optical clarity, but cross-field contradictions, validity expiry, format irregularity, or tampering anomalies were detected."
         for a in anomalies:
-            if a.severity == "high":
+            if a.severity in ("high", "medium"):
                 signals.append(EvidenceSignal(
                     label=a.category.capitalize(),
                     impact="risk",
@@ -538,6 +658,19 @@ class DocumentIntelligencePipeline:
         mrz_result = process_mrz(ocr_result.detected_lines)
         doc_type = detect_document_type(ocr_result.text, filename, mrz_result.detected)
 
+        # Fallback to dataset category if doc_type is UNKNOWN and document matches dataset
+        if doc_type == "UNKNOWN" and is_dataset_match and matched_dataset_id:
+            category_prefix_map = {
+                "PASS": "PASSPORT",
+                "AAD": "AADHAAR_STYLE",
+                "DL": "DRIVING_LICENCE",
+                "VOT": "VOTER_ID",
+            }
+            for prefix, mapped_type in category_prefix_map.items():
+                if matched_dataset_id.upper().startswith(prefix):
+                    doc_type = mapped_type
+                    break
+
         if doc_type != "PASSPORT" and not mrz_result.detected:
             mrz_result.applicable = False
             mrz_result.mrz_type = "Not Applicable"
@@ -547,6 +680,7 @@ class DocumentIntelligencePipeline:
 
         # Stage 6: Cross-Field Consistency
         consistency_items = check_consistency(structured_fields, mrz_result)
+        consistency_items = check_consistency(structured_fields, mrz_result, ocr_result.text)
 
         # Stage 7: Anomaly Signals
         anomaly_signals = generate_anomaly_signals(quality, mrz_result, consistency_items)
@@ -649,8 +783,18 @@ class DocumentIntelligencePipeline:
         with open(file_path, "rb") as f:
             data = f.read()
 
+        category_map = {
+            "passport": "PASSPORT",
+            "aadhaar": "AADHAAR_STYLE",
+            "driving_licence": "DRIVING_LICENCE",
+            "voter_id": "VOTER_ID",
+        }
+        dataset_category_doc_type = category_map.get(target_doc.get("category", "").lower())
+
         filename = f"{normalized_id.lower()}.png"
         res = self.analyze(data, filename, "image/png")
+        if dataset_category_doc_type and res.document_type == "UNKNOWN":
+            res = res.model_copy(update={"document_type": dataset_category_doc_type})
         _DATASET_ANALYSIS_CACHE[normalized_id] = res
         return res
 

@@ -10,7 +10,7 @@ class AuditEventSchema(BaseModel):
     event_type: str
     previous_hash: str
     current_hash: str
-    integrity_state: str = "VALID"
+    integrity_state: str = "VERIFIED"
     payload_summary: str
 
 

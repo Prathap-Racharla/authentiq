@@ -94,13 +94,34 @@ def generate_anomaly_signals(
     # 3. Cross-Field Consistency Signals
     for item in consistency_items:
         if item.status == "MISMATCH":
+            risk_contrib = "+15 risk"
+            severity = "medium"
+            if "UIDAI" in item.comparison:
+                risk_contrib = "+25 risk"
+                severity = "medium"
+            elif "RTO" in item.comparison:
+                risk_contrib = "+35 risk"
+                severity = "high"
+            elif "EPIC" in item.comparison:
+                risk_contrib = "+25 risk"
+                severity = "medium"
+            elif "Expiry" in item.comparison:
+                risk_contrib = "+25 risk"
+                severity = "high"
+            elif "Licensing Age" in item.comparison:
+                risk_contrib = "+35 risk"
+                severity = "high"
+            elif "Demographic" in item.comparison:
+                risk_contrib = "+25 risk"
+                severity = "medium"
+
             signals.append(DocumentAnomalySignal(
                 signal_id=f"SIG-CONSIST-MIS-{item.comparison.replace(' ', '_').replace('↔', '_')}",
                 category="consistency",
-                severity="high",
+                severity=severity,
                 confidence=94.0,
                 description=f"Field inconsistency detected in {item.comparison}: {item.explanation}",
-                risk_contribution="+15 risk"
+                risk_contribution=risk_contrib
             ))
         elif item.status == "MATCH" and "Cross-Check" not in item.comparison:
             signals.append(DocumentAnomalySignal(

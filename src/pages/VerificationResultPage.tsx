@@ -23,6 +23,7 @@ import { BiometricAnalysisResponse } from '../services/biometricApi';
 import { recordAuditEvent } from '../services/auditApi';
 import { evaluateEvidence } from '../services/riskEngine';
 import { OfficerDecisionResponse } from '../services/verificationApi';
+import { formatDocumentType } from '../utils/formatters';
 import { 
   ArrowLeft, 
   Layers, 
@@ -125,7 +126,13 @@ export const VerificationResultPage: React.FC = () => {
         const docNat = docFields.find(f => f.field === 'nationality')?.value;
         const docDob = docFields.find(f => f.field === 'date_of_birth')?.value;
 
-        const effectiveDocType = intakeData?.formData?.documentType || docAnalysis?.document_type || prev.documentType;
+        const rawDocType = intakeData?.formData?.documentType || docAnalysis?.document_type || prev.documentType;
+        const effectiveDocType = formatDocumentType(
+          rawDocType,
+          docAnalysis?.ocr_raw_text,
+          docAnalysis?.filename,
+          intakeData?.selectedDatasetDoc?.id
+        );
         const effectiveName = intakeData?.formData?.fullName || docName || prev.subjectName;
         const effectiveDocNum = intakeData?.formData?.documentNumber || docNum || '';
         const effectiveNat = intakeData?.formData?.nationality || docNat || prev.nationality;

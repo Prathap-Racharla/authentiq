@@ -74,3 +74,74 @@ export function getConfidenceLevel(score: number): {
   };
 }
 
+export function formatDocumentType(
+  rawType?: string,
+  ocrText?: string,
+  filename?: string,
+  datasetDocId?: string
+): string {
+  const t = (rawType || '').toUpperCase();
+  const text = (ocrText || '').toUpperCase();
+  const fn = (filename || '').toLowerCase();
+  const did = (datasetDocId || '').toUpperCase();
+
+  if (
+    t.includes('PASSPORT') ||
+    text.includes('PASSPORT') ||
+    fn.includes('pass_') ||
+    fn.includes('pass-') ||
+    fn.includes('passport') ||
+    did.startsWith('PASS')
+  ) {
+    return 'International Passport';
+  }
+  if (
+    t.includes('AADHAAR') ||
+    text.includes('AADHAAR') ||
+    text.includes('UIDAI') ||
+    text.includes('UNIQUE IDENTIFICATION') ||
+    fn.includes('aad_') ||
+    fn.includes('aad-') ||
+    fn.includes('aadhaar') ||
+    did.startsWith('AAD')
+  ) {
+    return 'Aadhaar Card';
+  }
+  if (
+    t.includes('DRIVING') ||
+    t.includes('LICENCE') ||
+    t.includes('LICENSE') ||
+    text.includes('DRIVING') ||
+    text.includes('LICENCE') ||
+    text.includes('LICENSE') ||
+    fn.includes('dl_') ||
+    fn.includes('dl-') ||
+    fn.includes('driving') ||
+    did.startsWith('DL')
+  ) {
+    return 'Driving Licence';
+  }
+  if (
+    t.includes('VOTER') ||
+    t.includes('EPIC') ||
+    text.includes('VOTER') ||
+    text.includes('ELECTION') ||
+    text.includes('EPIC') ||
+    fn.includes('vot_') ||
+    fn.includes('vot-') ||
+    fn.includes('voter') ||
+    did.startsWith('VOT')
+  ) {
+    return 'Voter ID';
+  }
+  if (
+    t.includes('PAN') ||
+    text.includes('PERMANENT ACCOUNT NUMBER') ||
+    fn.includes('pan') ||
+    did.startsWith('PAN')
+  ) {
+    return 'PAN Card';
+  }
+  return 'Identity Document';
+}
+
